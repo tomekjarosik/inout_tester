@@ -8,17 +8,19 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// TODO: Add config for:
+//   - problems (e.g. zad1, zad2 etc)
+// TODO: Handle Ctrl+C properly
 func main() {
-	fmt.Println("v0.01")
+	fmt.Println("Started new server at http://localhost:8080")
 
-	sp := NewSubmissionProcessor()
-	rp := NewRequestProcessor(sp)
+	storage := NewDefaultSubmissionStorage()
+	sp := NewSubmissionProcessor(storage)
+	rp := NewRequestProcessor(storage, sp)
 
-	// creates a new instance of a mux router
 	myRouter := mux.NewRouter().StrictSlash(true)
-	// replace http.HandleFunc with myRouter.HandleFunc
-	myRouter.HandleFunc("/", wwwHomePage)
-	myRouter.HandleFunc("/submit", wwwSubmitForm)
+	myRouter.HandleFunc("/", rp.RenderHomePage)
+	myRouter.HandleFunc("/submit", rp.wwwSubmitForm)
 	myRouter.HandleFunc("/api/submit", rp.apiSubmitSolutionHandler).Methods("POST")
 	myRouter.HandleFunc("/api/submission/{problemName}/{id}", rp.apiReadSingleSubmission)
 

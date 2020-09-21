@@ -1,5 +1,7 @@
 package main
 
+//go:generate stringer -type=TestCaseStatus
+
 import (
 	"bufio"
 	"context"
@@ -8,9 +10,57 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"time"
 )
+
+// TestCaseStatus status of the
+type TestCaseStatus int
+
+const (
+	// NotRunYet test is waiting to be run
+	NotRunYet TestCaseStatus = iota
+	// InternalError something unexpected went wrong
+	InternalError
+	// CompilationError the solution failed to compile
+	CompilationError
+	// TimeLimitExceeded the test took too long to process
+	TimeLimitExceeded
+	// MemoryLimitExceeded the test run used too much RAM
+	MemoryLimitExceeded
+	// WrongAnswer test run successfully but test outputs differ
+	WrongAnswer
+	// Accepted all OK
+	Accepted
+)
+
+// TestCase struct describing results of a single test run (input, output, expected output)
+type TestCase struct {
+	Name                 string        `json:"name"`
+	InputFilename        string        `json:"in"`
+	GoldenOutputFilename string        `json:"goldenOut"`
+	OutputFilename       string        `json:"out"`
+	TimeLimit            time.Duration `json:"timeLimit"`
+	MemoryLimit          int           `json:"memoryLimit"`
+
+	Status            TestCaseStatus `json:"status"`
+	StatusDescription string         `json:"statusDescription"`
+	Duration          time.Duration  `json:"duration"`
+}
+
+// NewTestCase construct of TestCase struct
+func NewTestCase(solutionID string, testName string, problemDataDir string, outputDir string) TestCase {
+	return TestCase{
+		Name:                 testName,
+		Status:               NotRunYet,
+		Duration:             0,
+		InputFilename:        path.Join(problemDataDir, testName+".in"),
+		GoldenOutputFilename: path.Join(problemDataDir, testName+".out"),
+		OutputFilename:       path.Join(outputDir, testName+"."+solutionID+".out"),
+		TimeLimit:            10 * time.Second,
+	}
+}
 
 // TODO(tjarosik): add static analysis and memory sanitizers for clang
 func compileSolution(sourceCodeFile string, executableFile string) (output []byte, err error) {
@@ -61,15 +111,13 @@ func runSingleTestCase(executable string, tc TestCase) TestCase {
 		tc.StatusDescription = fmt.Sprintf("unable to run executable '%s' on input file '%s'", executable, tc.InputFilename)
 		return tc
 	}
-	tc.Status = TestCaseOK
-	tc.StatusDescription = fmt.Sprintf("ran successfully")
 
 	err = compareFiles(tc.GoldenOutputFilename, tc.OutputFilename)
 	if err != nil {
 		tc.Status = WrongAnswer
 		tc.StatusDescription = err.Error()
 	} else {
-		tc.Status = TestCaseOK
+		tc.Status = Accepted
 		tc.StatusDescription = "OK"
 	}
 	return tc

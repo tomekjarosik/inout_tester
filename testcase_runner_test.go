@@ -1,5 +1,9 @@
 package main
 
+//go:generate go build -o testdata/multiply2.exe testdata/multiply2.go
+//go:generate go build -o testdata/multiply3.exe testdata/multiply3.go
+//go:generate go build -o testdata/infinite_loop.exe testdata/infinite_loop.go
+
 import (
 	"errors"
 	"testing"
@@ -13,11 +17,23 @@ func TestRunTestCase_Success(t *testing.T) {
 		Name:                 "t1",
 		InputFilename:        "testdata/problems/volvo/t1.in",
 		GoldenOutputFilename: "testdata/problems/volvo/t1.out",
-		OutputFilename:       "testdata/submissions/volvo/t1.unittests.out",
+		OutputFilename:       "testdata/submissions/volvo/t1.unittests2.out",
 		TimeLimit:            3 * time.Second,
 	}
 	outTc := runSingleTestCase("testdata/multiply2.exe", tc)
-	assert.Equal(t, Success, outTc.Status)
+	assert.Equal(t, Accepted, outTc.Status)
+}
+
+func TestRunTestCase_WrongAnswer(t *testing.T) {
+	tc := TestCase{
+		Name:                 "t1",
+		InputFilename:        "testdata/problems/volvo/t1.in",
+		GoldenOutputFilename: "testdata/problems/volvo/t1.out",
+		OutputFilename:       "testdata/submissions/volvo/t1.unittests3.out",
+		TimeLimit:            3 * time.Second,
+	}
+	outTc := runSingleTestCase("testdata/multiply3.exe", tc)
+	assert.Equal(t, Accepted, outTc.Status)
 }
 
 func TestRunTestCase_MissingInputFile(t *testing.T) {
