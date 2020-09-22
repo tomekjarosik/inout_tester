@@ -10,16 +10,15 @@ func _() {
 	var x [1]struct{}
 	_ = x[NotRunYet-0]
 	_ = x[InternalError-1]
-	_ = x[CompilationError-2]
-	_ = x[TimeLimitExceeded-3]
-	_ = x[MemoryLimitExceeded-4]
-	_ = x[WrongAnswer-5]
-	_ = x[Accepted-6]
+	_ = x[TimeLimitExceeded-2]
+	_ = x[MemoryLimitExceeded-3]
+	_ = x[WrongAnswer-4]
+	_ = x[Accepted-5]
 }
 
-const _TestCaseStatus_name = "NotRunYetInternalErrorCompilationErrorTimeLimitExceededMemoryLimitExceededWrongAnswerAccepted"
+const _TestCaseStatus_name = "NotRunYetInternalErrorTimeLimitExceededMemoryLimitExceededWrongAnswerAccepted"
 
-var _TestCaseStatus_index = [...]uint8{0, 9, 22, 38, 55, 74, 85, 93}
+var _TestCaseStatus_index = [...]uint8{0, 9, 22, 39, 58, 69, 77}
 
 func (i TestCaseStatus) String() string {
 	if i < 0 || i >= TestCaseStatus(len(_TestCaseStatus_index)-1) {

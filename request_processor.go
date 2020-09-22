@@ -5,7 +5,12 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"time"
 )
+
+// TODO: Use Material https://materializecss.com/navbar.html for all pages
+// TODO: Refactor sa MaterialCSS can be easily used e.g extract header and common stuff
+// 
 
 // RequestProcessor processes HTTP requests
 type RequestProcessor struct {
@@ -81,36 +86,89 @@ func (rp *RequestProcessor) wwwSubmitForm(w http.ResponseWriter, r *http.Request
 //         "Czas zgłoszenia"	"Zadanie"  "Status"	Wynik (liczba testow OK/All)
 
 func (rp *RequestProcessor) RenderHomePage(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.New("homepage").Parse(`
-	<style type="text/css">
-.tg  {border-collapse:collapse;border-spacing:0;margin:0px auto;}
-.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-  overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg .tg-1wig{font-weight:bold;text-align:left;vertical-align:top}
-.tg .tg-0lax{text-align:left;vertical-align:top}
-@media screen and (max-width: 767px) {.tg {width: auto !important;}.tg col {width: auto !important;}.tg-wrap {overflow-x: auto;-webkit-overflow-scrolling: touch;margin: auto 0px;}}</style>
-<div class="tg-wrap"><table class="tg">
-<thead>
-  <tr>
-    <th class="tg-1wig">Submitted at</th>
-    <th class="tg-1wig">Problem</th>
-    <th class="tg-1wig">Status</th>
-    <th class="tg-1wig">Score</th>
-  </tr>
-</thead>
-<tbody>
-{{range .}}
-  <tr>
-    <td class="tg-0lax">{{.SubmittedAt}} </td>
-    <td class="tg-0lax">{{.ProblemName}} </td>
-    <td class="tg-0lax">{{.State}}</td>
-    <td class="tg-0lax">{{.Score }}</td>
-  </tr>
-{{end}}
-</tbody>
-</table></div>
+	tmpl, err := template.New("homepage").Funcs(
+		template.FuncMap{
+			"TimeFormat": func(t time.Time) string { return t.Format(time.Stamp) },
+			"ScoreColorFormat": func(score int) string {
+				if score == 0 {
+					return "red"
+				} else {
+					return "blue"
+				}
+			},
+		}).Parse(`
+<!DOCTYPE html>
+<html>
+	<head>
+		<!--Import Google Icon Font-->
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+		<!-- Compiled and minified CSS -->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+		
+		<!-- Compiled and minified JavaScript -->
+		
+		<!--Let browser know website is optimized for mobile-->
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+		<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			var elems = document.querySelectorAll('.collapsible');
+			var instances = M.Collapsible.init(elems,  {
+				accordion: false
+			  });
+		});
+		</script>
+	</head>
+
+	<body class = "container">
+		<nav>
+			<div class="nav-wrapper grey">
+			<a href="#" class="brand-logo">INOUT</a>
+			<ul id="nav-mobile" class="right hide-on-med-and-down">
+				<li><a href="/">Submissions</a></li>
+				<li><a href="Ooooo">Components</a></li>
+				<li><a class="waves-effect waves-light btn" href="/submit"><i class="material-icons right">cloud_upload</i>Submit</a></li>
+			</ul>
+			</div>
+		</nav>
+
+		<div class="divider"></div>
+		
+		<div class="section center-align">
+		{{range .}}
+		<ul class="collapsible">
+		<li>
+		<div class="collapsible-header"> {{TimeFormat .SubmittedAt}} for {{.ProblemName}} {{.State}} <span class="new badge {{ScoreColorFormat .Score}}" data-badge-caption="points">{{.Score}}</span> </div>
+		<div class="collapsible-body"><span>
+			<table>
+			<thead>
+			<tr>
+				<th>Test name</th>
+				<th>Status</th>
+				<th>Duration</th>
+				<th>Additional info</th>
+			</tr>
+			<tbody>
+			{{range .TestCases}}
+				<tr>
+					<td class="tg-0lax">{{.Name}} </td>
+					<td class="tg-0lax">{{.Status}} </td>
+					<td class="tg-0lax">{{.Duration}} / {{.TimeLimit}}</td>
+					<td class="tg-0lax">{{.StatusDescription}}</td>
+				</tr>
+			{{end}}
+			</tbody> 
+			</table>
+			</span></div>
+		</li>
+		</ul>
+		{{end}}
+		</div>
+	<!--JavaScript at end of body for optimized loading-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+	</body>
+</html>
 `)
 
 	if err != nil {

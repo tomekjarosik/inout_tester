@@ -67,19 +67,28 @@ func (p *defaultSubmissionProcessor) processSubmission(submission SubmissionMeta
 		return submission, err
 	}
 	submission.State = Compiling
+	p.store.Save(submission)
+
 	compilationDir := path.Join(p.store.RootDir(), submission.ProblemName)
 	submission.CompilationOutput, err = compileSolution(
 		path.Join(compilationDir, submission.SolutionFilename),
 		path.Join(compilationDir, submission.ExecutableFilename))
+
 	if err != nil {
+		submission.State = CompilationError
+		p.store.Save(submission)
 		return submission, err
 	}
+	submission.State = RunningTests
+	p.store.Save(submission)
+
 	var processedTestCases []TestCase
 	for _, tc := range testcases {
 		processedTc := runSingleTestCase(path.Join(compilationDir, submission.ExecutableFilename), tc)
 		processedTestCases = append(processedTestCases, processedTc)
 	}
 	submission.TestCases = processedTestCases
+	submission.State = RunAllTests
 	err = p.store.Save(submission)
 	log.Println("Processed submission", submission)
 	return submission, err
@@ -90,8 +99,6 @@ func (p *defaultSubmissionProcessor) Process() error {
 		log.Panic(err)
 	}
 	for submission := range p.queue {
-		// TODO:
-		//p.deleteSubmission(submission, p.queueDirectory)
 		_, err := p.processSubmission(submission)
 		if err != nil {
 			log.Println("ProcessSubmission returned error: ", err)

@@ -23,8 +23,6 @@ const (
 	NotRunYet TestCaseStatus = iota
 	// InternalError something unexpected went wrong
 	InternalError
-	// CompilationError the solution failed to compile
-	CompilationError
 	// TimeLimitExceeded the test took too long to process
 	TimeLimitExceeded
 	// MemoryLimitExceeded the test run used too much RAM
@@ -154,7 +152,7 @@ func compareFiles(expected, actual string) error {
 			if len(t2Msg) > 256 {
 				t2Msg = t2[:256] + "..."
 			}
-			return fmt.Errorf("files differ in line: %d: expected: %s, actual: %s", i, t1Msg, t2Msg)
+			return fmt.Errorf("files differ in line %d: expected: %s, actual: %s", i, t1Msg, t2Msg)
 		}
 		i++
 	}

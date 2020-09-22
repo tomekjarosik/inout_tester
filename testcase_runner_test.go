@@ -82,18 +82,18 @@ func TestCompareFiles_Identical(t *testing.T) {
 }
 func TestCompareFiles_Different1(t *testing.T) {
 	err := compareFiles(diffDataDir+"a.txt", diffDataDir+"b.txt")
-	assert.Equal(t, err, errors.New("files differ in line: 1: expected: 456, actual: gggggg  gggggg"))
+	assert.Equal(t, err, errors.New("files differ in line 1: expected: 456, actual: gggggg  gggggg"))
 }
 func TestCompareFiles_AdditionalLines(t *testing.T) {
 	err := compareFiles(diffDataDir+"a.txt", diffDataDir+"a_extended.txt")
 	assert.Equal(t, err, errors.New("file testdata/filediffdata/a_extended.txt contains additional non-empty lines"))
 	err = compareFiles(diffDataDir+"a_extended.txt", diffDataDir+"a.txt")
-	assert.Equal(t, err, errors.New("files differ in line: 3: expected: 10 12 13, actual: "))
+	assert.Equal(t, err, errors.New("files differ in line 3: expected: 10 12 13, actual: "))
 }
 
 func TestCompareFiles_DifferentLongLines(t *testing.T) {
 	err := compareFiles(diffDataDir+"long.txt", diffDataDir+"a_extended.txt")
-	assert.Equal(t, err, errors.New("files differ in line: 0: expected: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..., actual: 123"))
+	assert.Equal(t, err, errors.New("files differ in line 0: expected: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..., actual: 123"))
 	err = compareFiles(diffDataDir+"a_extended.txt", diffDataDir+"long.txt")
-	assert.Equal(t, err, errors.New("files differ in line: 0: expected: 123, actual: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..."))
+	assert.Equal(t, err, errors.New("files differ in line 0: expected: 123, actual: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa..."))
 }

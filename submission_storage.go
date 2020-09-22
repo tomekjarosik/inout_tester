@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -26,10 +27,12 @@ const (
 	Queued SubmissionState = iota
 	// Compiling the solution is being processed
 	Compiling
-	// Processing the solution is being processed
-	Processing
-	// Processed the solution has been processed and results are available
-	Processed
+	// CompilationError the solution failed to compile
+	CompilationError
+	// RunningTests currently running the provided test cases
+	RunningTests
+	// RunAllTests all done
+	RunAllTests
 )
 
 // SubmissionMetadata metadata of the submission
@@ -54,7 +57,14 @@ type SubmissionStorage interface {
 	RootDir() string
 }
 
-// NewSubmissionMetadata create new SubmissionMetadata object with unique ID
+// ByTimestampt is a helper type to implement sorting
+type ByTimestamp []SubmissionMetadata
+
+func (a ByTimestamp) Len() int           { return len(a) }
+func (a ByTimestamp) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByTimestamp) Less(i, j int) bool { return a[i].SubmittedAt.After(a[j].SubmittedAt) }
+
+// Upload new SubmissionMetadata object with unique ID
 func (store *defaultSubmissionStorage) Upload(problemName string, solution io.Reader) (SubmissionMetadata, error) {
 	id := guuid.New()
 	metadata := SubmissionMetadata{
@@ -133,10 +143,11 @@ func (store *defaultSubmissionStorage) Save(metadata SubmissionMetadata) error {
 func (store *defaultSubmissionStorage) List() ([]SubmissionMetadata, error) {
 	store.m.Lock()
 	defer store.m.Unlock()
-	res := make([]SubmissionMetadata, len(store.data))
+	res := make([]SubmissionMetadata, 0)
 	for _, elem := range store.data {
 		res = append(res, elem)
 	}
+	sort.Sort(ByTimestamp(res))
 	return res, nil
 }
 func (store *defaultSubmissionStorage) Remove(id guuid.UUID) error {

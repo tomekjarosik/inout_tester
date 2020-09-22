@@ -10,13 +10,14 @@ func _() {
 	var x [1]struct{}
 	_ = x[Queued-0]
 	_ = x[Compiling-1]
-	_ = x[Processing-2]
-	_ = x[Processed-3]
+	_ = x[CompilationError-2]
+	_ = x[RunningTests-3]
+	_ = x[RunAllTests-4]
 }
 
-const _SubmissionState_name = "QueuedCompilingProcessingProcessed"
+const _SubmissionState_name = "QueuedCompilingCompilationErrorRunningTestsRunAllTests"
 
-var _SubmissionState_index = [...]uint8{0, 6, 15, 25, 34}
+var _SubmissionState_index = [...]uint8{0, 6, 15, 31, 43, 54}
 
 func (i SubmissionState) String() string {
 	if i < 0 || i >= SubmissionState(len(_SubmissionState_index)-1) {
