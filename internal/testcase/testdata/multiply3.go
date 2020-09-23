@@ -5,5 +5,5 @@ import "fmt"
 func main() {
 	var i int
 	_, _ = fmt.Scanf("%d", &i)
-	fmt.Printf("%d\n", i*2)
+	fmt.Printf("%d\n", i*3)
 }

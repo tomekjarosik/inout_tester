@@ -17,6 +17,7 @@ import (
 	"time"
 
 	guuid "github.com/google/uuid"
+	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 )
 
 // SubmissionState submission state
@@ -37,14 +38,14 @@ const (
 
 // SubmissionMetadata metadata of the submission
 type SubmissionMetadata struct {
-	ID                 guuid.UUID      `json:"id"`
-	SubmittedAt        time.Time       `JSON:"submittedAt"`
-	ProblemName        string          `json:"problemName"`
-	SolutionFilename   string          `json:"solutionFilename"`
-	State              SubmissionState `json:"state"`
-	ExecutableFilename string          `json:"executableFilename"`
-	CompilationOutput  []byte          `json:"compilationOutput"`
-	TestCases          []TestCase      `json:"testCases"`
+	ID                 guuid.UUID                   `json:"id"`
+	SubmittedAt        time.Time                    `JSON:"submittedAt"`
+	ProblemName        string                       `json:"problemName"`
+	SolutionFilename   string                       `json:"solutionFilename"`
+	State              SubmissionState              `json:"state"`
+	ExecutableFilename string                       `json:"executableFilename"`
+	CompilationOutput  []byte                       `json:"compilationOutput"`
+	CompletedTestCases []testcase.CompletedTestCase `json:"testCases"`
 }
 
 type SubmissionStorage interface {
@@ -198,8 +199,8 @@ func (store *defaultSubmissionStorage) Get(id guuid.UUID) (SubmissionMetadata, e
 
 func (meta SubmissionMetadata) Score() int {
 	res := 0
-	for _, tc := range meta.TestCases {
-		if tc.Status == Accepted {
+	for _, tc := range meta.CompletedTestCases {
+		if tc.Result.Status == testcase.Accepted {
 			res++
 		}
 	}

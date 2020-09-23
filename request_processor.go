@@ -6,11 +6,13 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 )
 
 // TODO: Use Material https://materializecss.com/navbar.html for all pages
 // TODO: Refactor sa MaterialCSS can be easily used e.g extract header and common stuff
-// 
+//
 
 // RequestProcessor processes HTTP requests
 type RequestProcessor struct {
@@ -85,6 +87,7 @@ func (rp *RequestProcessor) wwwSubmitForm(w http.ResponseWriter, r *http.Request
 // Main -> Moje zgłoszenia:
 //         "Czas zgłoszenia"	"Zadanie"  "Status"	Wynik (liczba testow OK/All)
 
+// TODO: Special function to colorize row by "Accepted/Wrong Answer/TimeLimitExceeded"
 func (rp *RequestProcessor) RenderHomePage(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.New("homepage").Funcs(
 		template.FuncMap{
@@ -94,6 +97,13 @@ func (rp *RequestProcessor) RenderHomePage(w http.ResponseWriter, r *http.Reques
 					return "red"
 				} else {
 					return "blue"
+				}
+			},
+			"TestCasesStatusColor": func(status testcase.Status) string {
+				if status == testcase.Accepted {
+					return "green lighten-3"
+				} else {
+					return " red lighten-3"
 				}
 			},
 		}).Parse(`
@@ -115,15 +125,22 @@ func (rp *RequestProcessor) RenderHomePage(w http.ResponseWriter, r *http.Reques
 		document.addEventListener('DOMContentLoaded', function() {
 			var elems = document.querySelectorAll('.collapsible');
 			var instances = M.Collapsible.init(elems,  {
-				accordion: false
+				accordion: true
 			  });
 		});
 		</script>
+		<style>
+		td, th {
+			border: 1px solid #dddddd;
+			text-align: left;
+			padding: 0px;
+		  }
+		</style>
 	</head>
 
 	<body class = "container">
 		<nav>
-			<div class="nav-wrapper grey">
+			<div class="nav-wrapper black">
 			<a href="#" class="brand-logo">INOUT</a>
 			<ul id="nav-mobile" class="right hide-on-med-and-down">
 				<li><a href="/">Submissions</a></li>
@@ -140,8 +157,8 @@ func (rp *RequestProcessor) RenderHomePage(w http.ResponseWriter, r *http.Reques
 		<ul class="collapsible">
 		<li>
 		<div class="collapsible-header"> {{TimeFormat .SubmittedAt}} for {{.ProblemName}} {{.State}} <span class="new badge {{ScoreColorFormat .Score}}" data-badge-caption="points">{{.Score}}</span> </div>
-		<div class="collapsible-body"><span>
-			<table>
+		<div class="collapsible-body">
+			<table class="responsive-table striped" cellspacing="0">
 			<thead>
 			<tr>
 				<th>Test name</th>
@@ -150,17 +167,17 @@ func (rp *RequestProcessor) RenderHomePage(w http.ResponseWriter, r *http.Reques
 				<th>Additional info</th>
 			</tr>
 			<tbody>
-			{{range .TestCases}}
-				<tr>
-					<td class="tg-0lax">{{.Name}} </td>
-					<td class="tg-0lax">{{.Status}} </td>
-					<td class="tg-0lax">{{.Duration}} / {{.TimeLimit}}</td>
-					<td class="tg-0lax">{{.StatusDescription}}</td>
+			{{range .CompletedTestCases}}
+				<tr class="{{TestCasesStatusColor .Result.Status}}">
+					<td>{{.Info.Name}} </td>
+					<td>{{.Result.Status}} </td>
+					<td>{{.Result.Duration}} / {{.Info.TimeLimit}}</td>
+					<td>{{.Result.StatusDescription}}</td>
 				</tr>
 			{{end}}
 			</tbody> 
 			</table>
-			</span></div>
+			</div>
 		</li>
 		</ul>
 		{{end}}

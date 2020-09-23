@@ -7,6 +7,9 @@ import (
 	"log"
 	"path"
 	"strings"
+	"time"
+
+	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 )
 
 // SubmissionProcessor processes submissions
@@ -42,7 +45,8 @@ func (p *defaultSubmissionProcessor) Submit(problemName string, solution io.Read
 	return nil
 }
 
-func (p *defaultSubmissionProcessor) PopulateTestCases(problemDataDir string, outputDir string, solutionID string) (testcases []TestCase, err error) {
+// TODO: Implement (TestCase)Provider in testcase package, which can populate test cases
+func (p *defaultSubmissionProcessor) PopulateTestCases(problemDataDir string) (testcases []testcase.Info, err error) {
 
 	files, err := ioutil.ReadDir(problemDataDir)
 	if err != nil {
@@ -53,7 +57,7 @@ func (p *defaultSubmissionProcessor) PopulateTestCases(problemDataDir string, ou
 		if !strings.HasSuffix(f.Name(), ext) {
 			continue
 		}
-		tc := NewTestCase(solutionID, strings.TrimSuffix(f.Name(), ext), problemDataDir, outputDir)
+		tc := testcase.NewInfo(strings.TrimSuffix(f.Name(), ext), 10*time.Second, 0)
 		testcases = append(testcases, tc)
 	}
 	return
@@ -61,8 +65,7 @@ func (p *defaultSubmissionProcessor) PopulateTestCases(problemDataDir string, ou
 
 func (p *defaultSubmissionProcessor) processSubmission(submission SubmissionMetadata) (SubmissionMetadata, error) {
 	fmt.Println("Processing submission:", submission)
-	testcases, err := p.PopulateTestCases(path.Join(p.problemsDataDirectory, submission.ProblemName),
-		path.Join(p.store.RootDir(), submission.ProblemName), submission.ID.String())
+	testcases, err := p.PopulateTestCases(path.Join(p.problemsDataDirectory, submission.ProblemName))
 	if err != nil {
 		return submission, err
 	}
@@ -70,7 +73,7 @@ func (p *defaultSubmissionProcessor) processSubmission(submission SubmissionMeta
 	p.store.Save(submission)
 
 	compilationDir := path.Join(p.store.RootDir(), submission.ProblemName)
-	submission.CompilationOutput, err = compileSolution(
+	submission.CompilationOutput, err = testcase.CompileSolution(
 		path.Join(compilationDir, submission.SolutionFilename),
 		path.Join(compilationDir, submission.ExecutableFilename))
 
@@ -82,12 +85,16 @@ func (p *defaultSubmissionProcessor) processSubmission(submission SubmissionMeta
 	submission.State = RunningTests
 	p.store.Save(submission)
 
-	var processedTestCases []TestCase
+	// TODO: name?
+	runner := testcase.NewRunner(p.problemsDataDirectory, path.Join(p.problemsDataDirectory, submission.ProblemName))
+
+	var processedTestCases []testcase.CompletedTestCase
 	for _, tc := range testcases {
-		processedTc := runSingleTestCase(path.Join(compilationDir, submission.ExecutableFilename), tc)
-		processedTestCases = append(processedTestCases, processedTc)
+		executable := path.Join(compilationDir, submission.ExecutableFilename)
+		res := runner.Run(executable, tc)
+		processedTestCases = append(processedTestCases, testcase.CompletedTestCase{Info: tc, Result: res})
 	}
-	submission.TestCases = processedTestCases
+	submission.CompletedTestCases = processedTestCases
 	submission.State = RunAllTests
 	err = p.store.Save(submission)
 	log.Println("Processed submission", submission)
