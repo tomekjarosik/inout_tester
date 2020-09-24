@@ -3,11 +3,9 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
+	"os"
 	"path"
-	"strings"
-	"time"
 
 	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 )
@@ -45,48 +43,34 @@ func (p *defaultSubmissionProcessor) Submit(problemName string, solution io.Read
 	return nil
 }
 
-// TODO: Implement (TestCase)Provider in testcase package, which can populate test cases
-func (p *defaultSubmissionProcessor) PopulateTestCases(problemDataDir string) (testcases []testcase.Info, err error) {
-
-	files, err := ioutil.ReadDir(problemDataDir)
-	if err != nil {
-		return
-	}
-	const ext = ".in"
-	for _, f := range files {
-		if !strings.HasSuffix(f.Name(), ext) {
-			continue
-		}
-		tc := testcase.NewInfo(strings.TrimSuffix(f.Name(), ext), 10*time.Second, 0)
-		testcases = append(testcases, tc)
-	}
-	return
-}
-
-func (p *defaultSubmissionProcessor) processSubmission(submission SubmissionMetadata) (SubmissionMetadata, error) {
+func (p *defaultSubmissionProcessor) processSubmission(submission SubmissionMetadata) (res SubmissionMetadata, err error) {
 	fmt.Println("Processing submission:", submission)
-	testcases, err := p.PopulateTestCases(path.Join(p.problemsDataDirectory, submission.ProblemName))
-	if err != nil {
-		return submission, err
-	}
+
 	submission.State = Compiling
 	p.store.Save(submission)
 
 	compilationDir := path.Join(p.store.RootDir(), submission.ProblemName)
-	submission.CompilationOutput, err = testcase.CompileSolution(
-		path.Join(compilationDir, submission.SolutionFilename),
-		path.Join(compilationDir, submission.ExecutableFilename))
+	solutionFilePath := path.Join(compilationDir, submission.SolutionFilename)
+	executableFilePath := path.Join(compilationDir, submission.ExecutableFilename)
+	submission.CompilationOutput, err = testcase.CompileSolution(solutionFilePath, testcase.AnalyzeModeClang, executableFilePath)
 
 	if err != nil {
 		submission.State = CompilationError
 		p.store.Save(submission)
 		return submission, err
 	}
+	defer os.Remove(executableFilePath)
+
 	submission.State = RunningTests
 	p.store.Save(submission)
 
-	// TODO: name?
-	runner := testcase.NewRunner(p.problemsDataDirectory, path.Join(p.problemsDataDirectory, submission.ProblemName))
+	testcases, err := testcase.Populate(path.Join(p.problemsDataDirectory, submission.ProblemName))
+	if err != nil {
+		return submission, err
+	}
+
+	runner := testcase.NewRunner(p.problemsDataDirectory,
+		testcase.DirectoryBasedDataStreamsProvider(path.Join(p.problemsDataDirectory, submission.ProblemName)))
 
 	var processedTestCases []testcase.CompletedTestCase
 	for _, tc := range testcases {

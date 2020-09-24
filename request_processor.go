@@ -2,17 +2,14 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
-	"time"
 
-	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
+	"github.com/tomekjarosik/inout_tester/website"
 )
 
-// TODO: Use Material https://materializecss.com/navbar.html for all pages
-// TODO: Refactor sa MaterialCSS can be easily used e.g extract header and common stuff
-//
+// TODO(tjarosik): pass compilation mode properly
+// TODO(tjarosik)
 
 // RequestProcessor processes HTTP requests
 type RequestProcessor struct {
@@ -37,8 +34,10 @@ func (rp *RequestProcessor) apiSubmitSolutionHandler(w http.ResponseWriter, r *h
 		return
 	}
 	defer formFile.Close()
-
-	err = rp.SubmissionProcessor.Submit(r.Form.Get("problemName"), formFile)
+	problemName := r.Form.Get("problemName")
+	compilationMode := r.Form.Get("compilationMode")
+	log.Println("compilationMode=", compilationMode)
+	err = rp.SubmissionProcessor.Submit(problemName, formFile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -56,137 +55,27 @@ func (rp *RequestProcessor) apiReadSingleSubmission(w http.ResponseWriter, r *ht
 
 // TODO(tjarosik): Read problem list from the Config
 func (rp *RequestProcessor) wwwSubmitForm(w http.ResponseWriter, r *http.Request) {
-	var form = `
-	<!DOCTYPE html>
-	<html>
-	<body>
-	
-	<h1>Submit your solution</h1>
-	
-	<form action="/api/submit" method="post" enctype="multipart/form-data">
-	<label for="problemName">Choose a problem:</label>
-		<select name="problemName" id="problemName">
-		<option value="volvo">volvo</option>
-		<option value="saab">saab</option>
-		</select>
-		<br><br>
-	  <label for="myfile">Select a file:</label>
-		<input type="file" id="solution" name="solution">
-		<input type="submit" value="Submit">
-	</form>
-	
-	<p>Click the "Submit" button and the form-data will be sent".</p>
-	
-	</body>
-	</html>
-`
-	fmt.Fprintln(w, form)
+	tmpl, err := website.SubmitForm()
+
+	if err != nil {
+		http.Error(w, "unable to parse template: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	type Data struct {
+		Name                       string
+		CompilationMode            string
+		CompilationModeDescription string
+	}
+	problems := []Data{
+		{"volvo", "cpp_release", "c++ release"},
+		{"saab", "cpp_analyze", "c++ analyze"}}
+	if err = tmpl.Execute(w, problems); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
-// TODO: Ekrany
-// Main -> Moje zgłoszenia:
-//         "Czas zgłoszenia"	"Zadanie"  "Status"	Wynik (liczba testow OK/All)
-
-// TODO: Special function to colorize row by "Accepted/Wrong Answer/TimeLimitExceeded"
 func (rp *RequestProcessor) RenderHomePage(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.New("homepage").Funcs(
-		template.FuncMap{
-			"TimeFormat": func(t time.Time) string { return t.Format(time.Stamp) },
-			"ScoreColorFormat": func(score int) string {
-				if score == 0 {
-					return "red"
-				} else {
-					return "blue"
-				}
-			},
-			"TestCasesStatusColor": func(status testcase.Status) string {
-				if status == testcase.Accepted {
-					return "green lighten-3"
-				} else {
-					return " red lighten-3"
-				}
-			},
-		}).Parse(`
-<!DOCTYPE html>
-<html>
-	<head>
-		<!--Import Google Icon Font-->
-		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
-		<!-- Compiled and minified CSS -->
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-		
-		<!-- Compiled and minified JavaScript -->
-		
-		<!--Let browser know website is optimized for mobile-->
-		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
-		<script>
-		document.addEventListener('DOMContentLoaded', function() {
-			var elems = document.querySelectorAll('.collapsible');
-			var instances = M.Collapsible.init(elems,  {
-				accordion: true
-			  });
-		});
-		</script>
-		<style>
-		td, th {
-			border: 1px solid #dddddd;
-			text-align: left;
-			padding: 0px;
-		  }
-		</style>
-	</head>
-
-	<body class = "container">
-		<nav>
-			<div class="nav-wrapper black">
-			<a href="#" class="brand-logo">INOUT</a>
-			<ul id="nav-mobile" class="right hide-on-med-and-down">
-				<li><a href="/">Submissions</a></li>
-				<li><a href="Ooooo">Components</a></li>
-				<li><a class="waves-effect waves-light btn" href="/submit"><i class="material-icons right">cloud_upload</i>Submit</a></li>
-			</ul>
-			</div>
-		</nav>
-
-		<div class="divider"></div>
-		
-		<div class="section center-align">
-		{{range .}}
-		<ul class="collapsible">
-		<li>
-		<div class="collapsible-header"> {{TimeFormat .SubmittedAt}} for {{.ProblemName}} {{.State}} <span class="new badge {{ScoreColorFormat .Score}}" data-badge-caption="points">{{.Score}}</span> </div>
-		<div class="collapsible-body">
-			<table class="responsive-table striped" cellspacing="0">
-			<thead>
-			<tr>
-				<th>Test name</th>
-				<th>Status</th>
-				<th>Duration</th>
-				<th>Additional info</th>
-			</tr>
-			<tbody>
-			{{range .CompletedTestCases}}
-				<tr class="{{TestCasesStatusColor .Result.Status}}">
-					<td>{{.Info.Name}} </td>
-					<td>{{.Result.Status}} </td>
-					<td>{{.Result.Duration}} / {{.Info.TimeLimit}}</td>
-					<td>{{.Result.StatusDescription}}</td>
-				</tr>
-			{{end}}
-			</tbody> 
-			</table>
-			</div>
-		</li>
-		</ul>
-		{{end}}
-		</div>
-	<!--JavaScript at end of body for optimized loading-->
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-	</body>
-</html>
-`)
+	tmpl, err := website.HomePageTemplate()
 
 	if err != nil {
 		http.Error(w, "unable to parse template: "+err.Error(), http.StatusInternalServerError)
@@ -199,5 +88,7 @@ func (rp *RequestProcessor) RenderHomePage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	tmpl.Execute(w, submissions)
+	if err = tmpl.Execute(w, submissions); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

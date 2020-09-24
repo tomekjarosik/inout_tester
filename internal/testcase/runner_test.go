@@ -11,41 +11,37 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/traherom/memstream"
 )
 
 func TestRunTestCase_Success(t *testing.T) {
 	info := Info{Name: "test1", TimeLimit: 3 * time.Second}
 	streams := Streams{
-		Input:        strings.NewReader("1\n"),
-		Output:       memstream.New(),
-		GoldenOutput: strings.NewReader("2\n"),
+		Input:  strings.NewReader("1\n"),
+		Output: strings.NewReader("2\n"),
 	}
-	res := internalRunSingleTestCase("testdata/multiply2.exe", info, streams)
+	res := runTestWithTmpOutput("testdata/multiply2.exe", info, streams)
 	assert.Equal(t, Accepted, res.Status)
 }
 
 func TestRunTestCase_WrongAnswer(t *testing.T) {
 	info := Info{Name: "test1", TimeLimit: 3 * time.Second}
 	streams := Streams{
-		Input:        strings.NewReader("1\n"),
-		Output:       memstream.New(),
-		GoldenOutput: strings.NewReader("2\n"),
+		Input:  strings.NewReader("1\n"),
+		Output: strings.NewReader("2\n"),
 	}
-	res := internalRunSingleTestCase("testdata/multiply3.exe", info, streams)
+	res := runTestWithTmpOutput("testdata/multiply3.exe", info, streams)
 	assert.Equal(t, WrongAnswer, res.Status)
 }
 
 func TestRunTestCase_TimeLimitExceeded(t *testing.T) {
 	info := Info{Name: "test1", TimeLimit: 1000 * time.Millisecond}
 	streams := Streams{
-		Input:        strings.NewReader("1\n"),
-		Output:       memstream.New(),
-		GoldenOutput: strings.NewReader("2\n"),
+		Input:  strings.NewReader("1\n"),
+		Output: strings.NewReader("2\n"),
 	}
-	res := internalRunSingleTestCase("testdata/infinite_loop.exe", info, streams)
+	res := runTestWithTmpOutput("testdata/infinite_loop.exe", info, streams)
 	assert.Equal(t, TimeLimitExceeded, res.Status)
-	assert.Equal(t, "time limit exceeded: test case was aborted after '1s'", res.StatusDescription)
+	assert.Equal(t, "time limit exceeded: test case was aborted after '1s'", res.Description)
 }
 
 func TestCompare_Identical(t *testing.T) {

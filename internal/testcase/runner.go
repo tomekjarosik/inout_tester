@@ -5,7 +5,6 @@ package testcase
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -22,7 +21,7 @@ type Status int
 
 const (
 	// NotRunYet test is waiting to be run
-	NotRunYet Status = iota
+	NotRunYet Status = iota + 1
 	// InternalError something unexpected went wrong
 	InternalError
 	// TimeLimitExceeded the test took too long to process
@@ -39,17 +38,18 @@ type Runner interface {
 	Run(executable string, info Info) Result
 }
 
-type defaultRunner struct {
-	name    string
-	rootDir string
-}
-
 // Streams provide data for a test case
 type Streams struct {
-	Input        io.Reader
-	Output       io.ReadWriteSeeker
-	GoldenOutput io.Reader
-	Close        func() error
+	Input  io.Reader
+	Output io.Reader
+	Close  func() error
+}
+
+type StreamsProvider func(info Info) (Streams, error)
+
+type defaultRunner struct {
+	name            string
+	streamsProvider StreamsProvider
 }
 
 // Info struct describing results of a single test run
@@ -60,9 +60,9 @@ type Info struct {
 }
 
 type Result struct {
-	Status            Status        `json:"status"`
-	StatusDescription string        `json:"statusDescription"`
-	Duration          time.Duration `json:"duration"`
+	Status      Status        `json:"status"`
+	Description string        `json:"description"`
+	Duration    time.Duration `json:"duration"`
 }
 
 type CompletedTestCase struct {
@@ -70,8 +70,35 @@ type CompletedTestCase struct {
 	Result Result `json:"result"`
 }
 
-func NewRunner(name string, problemDataDir string) Runner {
-	return &defaultRunner{name: name, rootDir: problemDataDir}
+func DirectoryBasedDataStreamsProvider(dir string) StreamsProvider {
+	return func(info Info) (Streams, error) {
+		streams := Streams{}
+		inFile, err := os.OpenFile(path.Join(dir, info.Name+".in"), os.O_RDONLY, 0755)
+		if err != nil {
+			return streams, err
+		}
+		goldenOutFile, err := os.OpenFile(path.Join(dir, info.Name+".out"), os.O_RDONLY, 0755)
+		if err != nil {
+			return streams, err
+		}
+
+		streams.Input = inFile
+		streams.Output = goldenOutFile
+
+		streams.Close = func() error {
+			defer inFile.Close()
+			defer goldenOutFile.Close()
+			// TODO: Handle closing better
+			return nil
+		}
+		return streams, nil
+	}
+}
+
+func NewRunner(name string, streamsProvider StreamsProvider) Runner {
+	return &defaultRunner{
+		name:            name,
+		streamsProvider: streamsProvider}
 }
 
 // NewTestCase construct of TestCase struct
@@ -84,86 +111,61 @@ func NewInfo(testName string, timeLimit time.Duration, memoryLimit int) Info {
 }
 
 func (r *defaultRunner) Run(executable string, info Info) Result {
-	streams, err := r.provideStreamsFor(info)
+	streams, err := r.streamsProvider(info)
 	if err != nil {
-		return Result{Status: InternalError, StatusDescription: fmt.Sprintf("unable to open data streams, %v", err)}
+		return Result{Status: InternalError, Description: fmt.Sprintf("unable to open data streams, %v", err)}
 	}
 	defer streams.Close()
-	return internalRunSingleTestCase(executable, info, streams)
+
+	return runTestWithTmpOutput(executable, info, streams)
 }
 
-func (r *defaultRunner) provideStreamsFor(info Info) (Streams, error) {
-	streams := Streams{}
-	inFile, err := os.OpenFile(path.Join(r.rootDir, info.Name+".in"), os.O_RDONLY, 0755)
-	if err != nil {
-		return streams, err
-	}
-	goldenOutFile, err := os.OpenFile(path.Join(r.rootDir, info.Name+".out"), os.O_RDONLY, 0755)
-	if err != nil {
-		return streams, err
-	}
+func runTestWithTmpOutput(executable string, info Info, streams Streams) Result {
 	tmpOutput, err := ioutil.TempFile(os.TempDir(), "temp-*.out")
 	if err != nil {
-		return streams, err
+		return Result{Status: InternalError, Description: fmt.Sprintf("unable to open temporary output file: %v", err)}
 	}
-	streams.Input = inFile
-	streams.Output = tmpOutput
-	streams.GoldenOutput = goldenOutFile
-	streams.Close = func() error {
-		defer inFile.Close()
-		defer goldenOutFile.Close()
-		defer os.Remove(tmpOutput.Name())
-		// TODO: Handle closing better
-		return nil
-	}
-	return streams, nil
-}
+	defer os.Remove(tmpOutput.Name())
+	defer tmpOutput.Close()
 
-// TODO(tjarosik): add static analysis and memory sanitizers for clang
-func CompileSolution(sourceCodeFile string, executableFile string) (output []byte, err error) {
-	cmd := exec.Command("clang++", "-std=c++14", sourceCodeFile, "-o", executableFile)
-	log.Println("About to execute command:", cmd.String())
-	output, err = cmd.Output()
-	if err != nil {
-		return output, errors.New("compilation failed with " + err.Error())
-	}
-	return output, nil
+	return RunTest(executable, info, streams, tmpOutput)
 }
 
 // TODO(tjarosik): handle memory limit (-> ulimit -m 100000 && exec ./my-binary)
-func internalRunSingleTestCase(executable string, info Info, streams Streams) Result {
-	res := Result{}
-
+func RunTest(executable string, info Info, streams Streams, generatedOutput io.ReadWriteSeeker) Result {
 	ctx, cancel := context.WithTimeout(context.Background(), info.TimeLimit)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, executable)
 	cmd.Stdin = streams.Input
-	cmd.Stdout = streams.Output
+	cmd.Stdout = generatedOutput
 	start := time.Now()
 	err := cmd.Run()
-	res.Duration = time.Since(start)
+	duration := time.Since(start)
 	if ctx.Err() == context.DeadlineExceeded {
-		res.Status = TimeLimitExceeded
-		res.StatusDescription = fmt.Sprintf("time limit exceeded: test case was aborted after '%v'", info.TimeLimit)
-		return res
+		return Result{Status: TimeLimitExceeded,
+			Description: fmt.Sprintf("time limit exceeded: test case was aborted after '%v'", info.TimeLimit),
+			Duration:    duration}
 	}
 	if err != nil {
 		log.Println(err)
-		res.Status = InternalError
-		res.StatusDescription = fmt.Sprintf("unable to run executable '%s' on test input file '%s'", executable, info.Name)
-		return res
+		return Result{Status: InternalError,
+			Description: fmt.Sprintf("unable to run executable '%s' on test input file '%s'", executable, info.Name),
+			Duration:    duration}
 	}
-	streams.Output.Seek(0, io.SeekStart)
-
-	err = compare(streams.GoldenOutput, streams.Output)
+	_, err = generatedOutput.Seek(0, io.SeekStart)
 	if err != nil {
-		res.Status = WrongAnswer
-		res.StatusDescription = err.Error()
-	} else {
-		res.Status = Accepted
-		res.StatusDescription = "OK"
+		return Result{Status: InternalError,
+			Description: fmt.Sprintf("unable to rewind generated output for test '%s'", info.Name),
+			Duration:    duration}
 	}
-	return res
+
+	err = compare(streams.Output, generatedOutput)
+	if err != nil {
+		return Result{Status: WrongAnswer,
+			Description: err.Error(), Duration: duration}
+	}
+
+	return Result{Status: Accepted, Description: "OK", Duration: duration}
 }
 
 func compare(expected, actual io.Reader) error {
