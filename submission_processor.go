@@ -52,7 +52,8 @@ func (p *defaultSubmissionProcessor) processSubmission(submission SubmissionMeta
 	compilationDir := path.Join(p.store.RootDir(), submission.ProblemName)
 	solutionFilePath := path.Join(compilationDir, submission.SolutionFilename)
 	executableFilePath := path.Join(compilationDir, submission.ExecutableFilename)
-	submission.CompilationOutput, err = testcase.CompileSolution(solutionFilePath, testcase.AnalyzeModeClang, executableFilePath)
+	submission.CompilationMode = testcase.AnalyzeGplusplusMode // TODO: pass from outside
+	submission.CompilationOutput, err = testcase.CompileSolution(solutionFilePath, submission.CompilationMode, executableFilePath)
 
 	if err != nil {
 		submission.State = CompilationError

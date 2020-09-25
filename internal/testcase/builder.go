@@ -16,26 +16,33 @@ const (
 	// Release this is release compilation mode with optimization
 	ReleaseMode CompilationMode = iota + 1
 	// AnalyzeClang this is mode which maximizes possibility of finding bugs
-	AnalyzeModeClang
+	AnalyzeClangMode
 	//AnalyzeGplusplus
-	AnalyzeModeGplusplus
+	AnalyzeGplusplusMode
 )
 
-func CompileSolution(sourceCodeFile string, mode CompilationMode, executableFile string) (output []byte, err error) {
+func compilationCommand(sourceCodeFile string, mode CompilationMode, executableFile string) (*exec.Cmd, error) {
 	var cmd *exec.Cmd
 	switch mode {
 	case ReleaseMode:
 		cmd = exec.Command("g++", "-std=c++17", "-static", "-O3", sourceCodeFile, "-lm", "-o", executableFile)
-	case AnalyzeModeClang:
+	case AnalyzeClangMode:
 		cmd = exec.Command("clang++", "-std=c++14", "-Wall", "-O1", "-g", "-fsanitize=address",
 			"-fno-omit-frame-pointer", sourceCodeFile, "-lm", "-o", executableFile)
-	case AnalyzeModeGplusplus:
+	case AnalyzeGplusplusMode:
 		cmd = exec.Command("g++", "-std=c++17", "-Wall", "-O1", "-g", "-fsanitize=address",
 			"-fno-omit-frame-pointer", sourceCodeFile, "-lm", "-o", executableFile)
 	default:
-		return []byte{}, errors.New("unknown compilation mode selected")
+		return nil, errors.New("unknown compilation mode selected")
 	}
+	return cmd, nil
+}
 
+func CompileSolution(sourceCodeFile string, mode CompilationMode, executableFile string) (output []byte, err error) {
+	cmd, err := compilationCommand(sourceCodeFile, mode, executableFile)
+	if err != nil {
+		return []byte{}, err
+	}
 	log.Println("About to execute command:", cmd.String())
 	output, err = cmd.CombinedOutput()
 	if err != nil {
@@ -45,6 +52,14 @@ func CompileSolution(sourceCodeFile string, mode CompilationMode, executableFile
 		return output, errors.New("compilation failed with " + err.Error())
 	}
 	return output, nil
+}
+
+func (cm CompilationMode) String() string {
+	cmd, err := compilationCommand("a.cpp", cm, "a.out")
+	if err != nil {
+		return "invalid compilation mode"
+	}
+	return cmd.String()
 }
 
 // PopulateTestCases searches directory for test case descriptions (.in / .out files, maybe others in the future)

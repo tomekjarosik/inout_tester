@@ -3,6 +3,8 @@ package website
 import (
 	"html/template"
 	"time"
+
+	"github.com/tomekjarosik/inout_tester/internal/testcase"
 )
 
 // TODO: maybe use proper templates??
@@ -45,6 +47,8 @@ func HomePageTemplate() (*template.Template, error) {
 			"TimeFormat":          func(t time.Time) string { return t.Format(time.Stamp) },
 			"ScoreColorFormat":    ScoreColorFormat,
 			"TestCaseStatusColor": TestCaseStatusColorFormat,
+			"HasAnyTestCases":     func(c []testcase.CompletedTestCase) bool { return len(c) > 0 },
+			"BytesToString":       func(arr []byte) string { return string(arr) },
 		}).Parse(HtmlDocumentWrap(HtmlHead() + `
 	<body class="container">
 		<nav>
@@ -66,33 +70,38 @@ func HomePageTemplate() (*template.Template, error) {
 		<li>
 		<div class="collapsible-header"> {{TimeFormat .SubmittedAt}} for {{.ProblemName}} {{.State}} <span class="new badge {{ScoreColorFormat .Score}}" data-badge-caption="points">{{.Score}}</span> </div>
 		<div class="collapsible-body">
-			<table class="responsive-table striped" cellspacing="0">
-			<style type="text/css" scoped>
-				td, th {
-					border: 1px solid #dddddd;
-					text-align: left;
-					padding: 0px;
-				}
-			</style>
-			<thead>
-			<tr>
-				<th>Test name</th>
-				<th>Status</th>
-				<th>Duration</th>
-				<th>Additional info</th>
-			</tr>
-			<tbody>
-			{{range .CompletedTestCases}}
-				<tr class="{{TestCaseStatusColor .Result.Status}}">
-					<td>{{.Info.Name}} </td>
-					<td>{{.Result.Status}} </td>
-					<td>{{.Result.Duration}} / {{.Info.TimeLimit}}</td>
-					<td>{{.Result.Description}}</td>
+			{{.CompilationMode}}
+			{{if HasAnyTestCases .CompletedTestCases}}
+				<table class="responsive-table striped" cellspacing="0">
+				<style type="text/css" scoped>
+					td, th {
+						border: 1px solid #dddddd;
+						text-align: left;
+						padding: 0px;
+					}
+				</style>
+				<thead>
+				<tr>
+					<th>Test name</th>
+					<th>Status</th>
+					<th>Duration</th>
+					<th>Additional info</th>
 				</tr>
+				<tbody>
+				{{range .CompletedTestCases}}
+					<tr class="{{TestCaseStatusColor .Result.Status}}">
+						<td>{{.Info.Name}} </td>
+						<td>{{.Result.Status}} </td>
+						<td>{{.Result.Duration}} / {{.Info.TimeLimit}}</td>
+						<td>{{.Result.Description}}</td>
+					</tr>
+				{{end}}
+				</tbody> 
+				</table>
+			{{else}}
+			<p>{{BytesToString .CompilationOutput}}</p>
 			{{end}}
-			</tbody> 
-			</table>
-			</div>
+		</div>
 		</li>
 		</ul>
 		{{end}}
@@ -123,8 +132,8 @@ func SubmitForm() (*template.Template, error) {
 		<div class="row input-field">
 			<select name="problemName" required>
 				<option value="" disabled selected>Choose problem</option>
-				{{range .}}
-				<option value="{{.Name}}">{{.Name}}</option>
+				{{range .Problems}}
+				<option value="{{.}}">{{.}}</option>
 				{{end}}
 			</select>
 	 	 </div>
@@ -132,8 +141,8 @@ func SubmitForm() (*template.Template, error) {
 		<div class="row input-field">
 		  <select name="compilationMode" required>
 			  <option value="" disabled selected>Choose compilation mode</option>
-			  {{range .}}
-			  <option value="{{.CompilationMode}}">{{.CompilationModeDescription}}</option>
+			  {{range .CompilationModes}}
+			  <option value="{{.}}">{{.}}</option>
 			  {{end}}
 		  </select>
 		</div>

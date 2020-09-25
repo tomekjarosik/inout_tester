@@ -5,11 +5,14 @@ import (
 	"log"
 	"net/http"
 
+	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 	"github.com/tomekjarosik/inout_tester/website"
 )
 
-// TODO(tjarosik): pass compilation mode properly
-// TODO(tjarosik)
+// TODO(tjarosik): show proper output for compilation error on home page
+// TODO(tjarosik): test g++/clang++ address sanitizers on Linux (+ write a README how to setup)
+// TODO(tjarosik): add redirect to home page after submitting a solution
+// TODO(tjarosik): add docker environment with adress sanitizers (g++ -lasan)
 
 // RequestProcessor processes HTTP requests
 type RequestProcessor struct {
@@ -61,15 +64,18 @@ func (rp *RequestProcessor) wwwSubmitForm(w http.ResponseWriter, r *http.Request
 		http.Error(w, "unable to parse template: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	type Data struct {
-		Name                       string
-		CompilationMode            string
-		CompilationModeDescription string
+
+	// TODO: list directoriess
+	problems := []string{"volvo", "saab"}
+	compilationModes := []testcase.CompilationMode{testcase.ReleaseMode, testcase.AnalyzeClangMode, testcase.AnalyzeGplusplusMode}
+
+	type ViewData struct {
+		Problems         []string
+		CompilationModes []testcase.CompilationMode
 	}
-	problems := []Data{
-		{"volvo", "cpp_release", "c++ release"},
-		{"saab", "cpp_analyze", "c++ analyze"}}
-	if err = tmpl.Execute(w, problems); err != nil {
+	data := ViewData{Problems: problems, CompilationModes: compilationModes}
+
+	if err = tmpl.Execute(w, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

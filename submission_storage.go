@@ -45,6 +45,7 @@ type SubmissionMetadata struct {
 	State              SubmissionState              `json:"state"`
 	ExecutableFilename string                       `json:"executableFilename"`
 	CompilationOutput  []byte                       `json:"compilationOutput"`
+	CompilationMode    testcase.CompilationMode     `json:"compilationMode"`
 	CompletedTestCases []testcase.CompletedTestCase `json:"testCases"`
 }
 
