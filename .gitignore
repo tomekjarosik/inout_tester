@@ -2,4 +2,5 @@
 *.exe
 submissions
 problems
-inout_tester
+inout_tester*
+build/

@@ -8,13 +8,14 @@ import (
 
 func SubmitForm() (*template.Template, error) {
 	return template.New("submitForm").Funcs(template.FuncMap{
-		"AsInt": func(mode testcase.CompilationMode) int { return int(mode) },
+		"AsInt":                    func(mode testcase.CompilationMode) int { return int(mode) },
+		"FullCompilationCommadFor": testcase.FullCompilationCommadFor,
 	}).Parse(HtmlDocumentWrap(HtmlHead() + `
 	<body class="container">
 
 	<nav>
 		<div class="nav-wrapper black">
-		<a href="#" class="brand-logo">INOUT</a>
+		<a href="/" class="brand-logo">INOUT</a>
 		<ul id="nav-mobile" class="right hide-on-med-and-down">
 			<li><a href="/">Home</a></li>
 		</ul>
@@ -38,7 +39,7 @@ func SubmitForm() (*template.Template, error) {
 		  <select name="compilationMode" required>
 			  <option value="" disabled selected>Choose compilation mode</option>
 			  {{range .CompilationModes}}
-			  <option value="{{AsInt .}}">{{.}}</option>
+			  <option value="{{AsInt .}}">{{.}} [{{FullCompilationCommadFor .}}]</span></option>
 			  {{end}}
 		  </select>
 		</div>

@@ -10,18 +10,12 @@ import (
 func HomePageTemplate() (*template.Template, error) {
 	return template.New("homepage").Funcs(
 		template.FuncMap{
-			"TimeFormat":          func(t time.Time) string { return t.Format(time.Stamp) },
-			"ScoreColorFormat":    ScoreColorFormat,
-			"TestCaseStatusColor": TestCaseStatusColorFormat,
-			"HasAnyTestCases":     func(c []testcase.CompletedTestCase) bool { return len(c) > 0 },
-			"BytesToString":       func(arr []byte) string { return string(arr) },
-			"FullCompilationCommandFor": func(cm testcase.CompilationMode) string {
-				cmd, err := testcase.CompilationCommand("a.cpp", cm, "a.out")
-				if err != nil {
-					return "unable to convert"
-				}
-				return cmd.String()
-			},
+			"TimeFormat":                func(t time.Time) string { return t.Format(time.Stamp) },
+			"ScoreColorFormat":          ScoreColorFormat,
+			"TestCaseStatusColor":       TestCaseStatusColorFormat,
+			"HasAnyTestCases":           func(c []testcase.CompletedTestCase) bool { return len(c) > 0 },
+			"BytesToString":             func(arr []byte) string { return string(arr) },
+			"FullCompilationCommandFor": testcase.FullCompilationCommadFor,
 		}).Parse(HtmlDocumentWrap(HtmlHead() + `
 	<body class="container">
 		<nav>

@@ -54,6 +54,14 @@ func CompileSolution(sourceCodeFile string, mode CompilationMode, executableFile
 	return output, nil
 }
 
+func FullCompilationCommadFor(cm CompilationMode) string {
+	cmd, err := CompilationCommand("a.cpp", cm, "a.out")
+	if err != nil {
+		return "unable to convert"
+	}
+	return cmd.String()
+}
+
 func (cm *CompilationMode) UnmarshalJSON(data []byte) error {
 	var s string
 	err := json.Unmarshal(data, &s)
