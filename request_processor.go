@@ -4,24 +4,25 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
+	"github.com/tomekjarosik/inout_tester/internal/submission"
 	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 	"github.com/tomekjarosik/inout_tester/website"
 )
 
-// TODO(tjarosik): show proper output for compilation error on home page
 // TODO(tjarosik): test g++/clang++ address sanitizers on Linux (+ write a README how to setup)
 // TODO(tjarosik): add redirect to home page after submitting a solution
 // TODO(tjarosik): add docker environment with adress sanitizers (g++ -lasan)
 
 // RequestProcessor processes HTTP requests
 type RequestProcessor struct {
-	SubmissionStorage   SubmissionStorage
-	SubmissionProcessor SubmissionProcessor
+	SubmissionStorage   submission.Storage
+	SubmissionProcessor submission.Processor
 }
 
 // NewRequestProcessor constructor
-func NewRequestProcessor(store SubmissionStorage, sp SubmissionProcessor) RequestProcessor {
+func NewRequestProcessor(store submission.Storage, sp submission.Processor) RequestProcessor {
 	return RequestProcessor{store, sp}
 }
 
@@ -38,16 +39,20 @@ func (rp *RequestProcessor) apiSubmitSolutionHandler(w http.ResponseWriter, r *h
 	}
 	defer formFile.Close()
 	problemName := r.Form.Get("problemName")
-	compilationMode := r.Form.Get("compilationMode")
+	compilationMode, _ := strconv.Atoi(r.Form.Get("compilationMode"))
+
 	log.Println("compilationMode=", compilationMode)
-	err = rp.SubmissionProcessor.Submit(problemName, formFile)
+	metadata := submission.NewMetadata(problemName, testcase.CompilationMode(compilationMode))
+	fmt.Println("submissionMetadata:", metadata)
+	err = rp.SubmissionProcessor.Submit(metadata, formFile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintln(w, "File Uploaded Successfully! ")
-	fmt.Fprintln(w, "Name of the File: ", header.Filename)
-	fmt.Fprintln(w, "Size of the File: ", header.Size)
+
+	fmt.Fprintf(w, website.HtmlDocumentWrap(
+		fmt.Sprintf(` <meta http-equiv="refresh" content="2;url=/" />
+			File %s uploaded successfully! You will be redirected to the Home Page in 2 seconds...`, header.Filename)))
 }
 
 func (rp *RequestProcessor) apiReadSingleSubmission(w http.ResponseWriter, r *http.Request) {
@@ -65,8 +70,11 @@ func (rp *RequestProcessor) wwwSubmitForm(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// TODO: list directoriess
-	problems := []string{"volvo", "saab"}
+	problems, err := testcase.ListAvailableProblems("problems")
+	if err != nil {
+		http.Error(w, "failed read problems from 'problems' directory: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	compilationModes := []testcase.CompilationMode{testcase.ReleaseMode, testcase.AnalyzeClangMode, testcase.AnalyzeGplusplusMode}
 
 	type ViewData struct {
@@ -88,13 +96,7 @@ func (rp *RequestProcessor) RenderHomePage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	submissions, err := rp.SubmissionStorage.List()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err = tmpl.Execute(w, submissions); err != nil {
+	if err = tmpl.Execute(w, rp.SubmissionStorage.List()); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

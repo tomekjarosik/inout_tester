@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/tomekjarosik/inout_tester/internal/submission"
 )
 
 // TODO: Add config for:
@@ -14,8 +15,8 @@ import (
 func main() {
 	fmt.Println("Started new server at http://localhost:8080")
 
-	storage := NewDefaultSubmissionStorage()
-	sp := NewSubmissionProcessor(storage)
+	storage := submission.NewDefaultStorage("submissions")
+	sp := submission.NewProcessor(storage)
 	rp := NewRequestProcessor(storage, sp)
 
 	myRouter := mux.NewRouter().StrictSlash(true)

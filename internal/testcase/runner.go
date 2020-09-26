@@ -1,6 +1,6 @@
 package testcase
 
-//go:generate stringer -type=Status
+
 
 import (
 	"bufio"
@@ -11,41 +11,14 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 	"time"
 )
 
-// Status status of the
-type Status int
-
-const (
-	// NotRunYet test is waiting to be run
-	NotRunYet Status = iota + 1
-	// InternalError something unexpected went wrong
-	InternalError
-	// TimeLimitExceeded the test took too long to process
-	TimeLimitExceeded
-	// MemoryLimitExceeded the test run used too much RAM
-	MemoryLimitExceeded
-	// WrongAnswer test run successfully but test outputs differ
-	WrongAnswer
-	// Accepted all OK
-	Accepted
-)
 
 type Runner interface {
 	Run(executable string, info Info) Result
 }
-
-// Streams provide data for a test case
-type Streams struct {
-	Input  io.Reader
-	Output io.Reader
-	Close  func() error
-}
-
-type StreamsProvider func(info Info) (Streams, error)
 
 type defaultRunner struct {
 	name            string
@@ -68,31 +41,6 @@ type Result struct {
 type CompletedTestCase struct {
 	Info   Info   `json:"info"`
 	Result Result `json:"result"`
-}
-
-func DirectoryBasedDataStreamsProvider(dir string) StreamsProvider {
-	return func(info Info) (Streams, error) {
-		streams := Streams{}
-		inFile, err := os.OpenFile(path.Join(dir, info.Name+".in"), os.O_RDONLY, 0755)
-		if err != nil {
-			return streams, err
-		}
-		goldenOutFile, err := os.OpenFile(path.Join(dir, info.Name+".out"), os.O_RDONLY, 0755)
-		if err != nil {
-			return streams, err
-		}
-
-		streams.Input = inFile
-		streams.Output = goldenOutFile
-
-		streams.Close = func() error {
-			defer inFile.Close()
-			defer goldenOutFile.Close()
-			// TODO: Handle closing better
-			return nil
-		}
-		return streams, nil
-	}
 }
 
 func NewRunner(name string, streamsProvider StreamsProvider) Runner {

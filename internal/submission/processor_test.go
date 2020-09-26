@@ -1,4 +1,4 @@
-package main
+package submission
 
 /*func TestPopulateTestCases_Success(t *testing.T) {
 	sp := defaultSubmissionProcessor{

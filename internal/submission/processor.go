@@ -1,4 +1,4 @@
-package main
+package submission
 
 import (
 	"fmt"
@@ -10,59 +10,58 @@ import (
 	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 )
 
-// SubmissionProcessor processes submissions
-type SubmissionProcessor interface {
-	Submit(problemName string, sourceCode io.Reader) error
+// Processor processes submissions
+type Processor interface {
+	Submit(meta Metadata, sourceCode io.Reader) error
 	Process() error
 	Quit()
 }
 
-type defaultSubmissionProcessor struct {
-	queue                 chan SubmissionMetadata
-	store                 SubmissionStorage
+type defaultProcessor struct {
+	queue                 chan Metadata
+	store                 Storage
 	problemsDataDirectory string
 }
 
-// NewSubmissionProcessor constructor of SubmissionProcessor
-func NewSubmissionProcessor(store SubmissionStorage) SubmissionProcessor {
-	return &defaultSubmissionProcessor{
-		queue:                 make(chan SubmissionMetadata, 1000),
+// NewProcessor constructor of the Processor
+func NewProcessor(store Storage) Processor {
+	return &defaultProcessor{
+		queue:                 make(chan Metadata, 1000),
 		store:                 store,
 		problemsDataDirectory: "problems",
 	}
 }
 
-func (p *defaultSubmissionProcessor) Submit(problemName string, solution io.Reader) error {
-	log.Println("defaultSubmissionProcessor Submit()")
-	metadata, err := p.store.Upload(problemName, solution)
+func (p *defaultProcessor) Submit(meta Metadata, solution io.Reader) error {
+	fmt.Println("Submit:", meta)
+	err := p.store.Upload(meta, solution)
 	if err != nil {
 		return err
 	}
-	p.queue <- metadata
+	p.queue <- meta
 
 	return nil
 }
 
-func (p *defaultSubmissionProcessor) processSubmission(submission SubmissionMetadata) (res SubmissionMetadata, err error) {
+func (p *defaultProcessor) processSubmission(submission Metadata) (res Metadata, err error) {
 	fmt.Println("Processing submission:", submission)
 
-	submission.State = Compiling
+	submission.Status = Compiling
 	p.store.Save(submission)
 
 	compilationDir := path.Join(p.store.RootDir(), submission.ProblemName)
 	solutionFilePath := path.Join(compilationDir, submission.SolutionFilename)
 	executableFilePath := path.Join(compilationDir, submission.ExecutableFilename)
-	submission.CompilationMode = testcase.AnalyzeGplusplusMode // TODO: pass from outside
 	submission.CompilationOutput, err = testcase.CompileSolution(solutionFilePath, submission.CompilationMode, executableFilePath)
 
 	if err != nil {
-		submission.State = CompilationError
+		submission.Status = CompilationError
 		p.store.Save(submission)
 		return submission, err
 	}
 	defer os.Remove(executableFilePath)
 
-	submission.State = RunningTests
+	submission.Status = RunningTests
 	p.store.Save(submission)
 
 	testcases, err := testcase.Populate(path.Join(p.problemsDataDirectory, submission.ProblemName))
@@ -78,15 +77,17 @@ func (p *defaultSubmissionProcessor) processSubmission(submission SubmissionMeta
 		executable := path.Join(compilationDir, submission.ExecutableFilename)
 		res := runner.Run(executable, tc)
 		processedTestCases = append(processedTestCases, testcase.CompletedTestCase{Info: tc, Result: res})
+		submission.CompletedTestCases = processedTestCases
+		p.store.Save(submission)
 	}
 	submission.CompletedTestCases = processedTestCases
-	submission.State = RunAllTests
+	submission.Status = AllTestsCompleted
 	err = p.store.Save(submission)
 	log.Println("Processed submission", submission)
 	return submission, err
 }
 
-func (p *defaultSubmissionProcessor) Process() error {
+func (p *defaultProcessor) Process() error {
 	if err := p.store.LoadAll(); err != nil {
 		log.Panic(err)
 	}
@@ -100,6 +101,6 @@ func (p *defaultSubmissionProcessor) Process() error {
 	return nil
 }
 
-func (p *defaultSubmissionProcessor) Quit() {
+func (p *defaultProcessor) Quit() {
 	close(p.queue)
 }
