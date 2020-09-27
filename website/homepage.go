@@ -7,6 +7,7 @@ import (
 	"github.com/tomekjarosik/inout_tester/internal/testcase"
 )
 
+// TODO: add 'active' to first collapsible item,e.g.: <li class="active">
 func HomePageTemplate() (*template.Template, error) {
 	return template.New("homepage").Funcs(
 		template.FuncMap{

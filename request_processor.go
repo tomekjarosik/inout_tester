@@ -19,11 +19,12 @@ import (
 type RequestProcessor struct {
 	SubmissionStorage   submission.Storage
 	SubmissionProcessor submission.Processor
+	TestcaseArchive     testcase.Archive
 }
 
 // NewRequestProcessor constructor
-func NewRequestProcessor(store submission.Storage, sp submission.Processor) RequestProcessor {
-	return RequestProcessor{store, sp}
+func NewRequestProcessor(store submission.Storage, sp submission.Processor, archive testcase.Archive) RequestProcessor {
+	return RequestProcessor{store, sp, archive}
 }
 
 func (rp *RequestProcessor) apiSubmitSolutionHandler(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +71,7 @@ func (rp *RequestProcessor) wwwSubmitForm(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	problems, err := testcase.ListAvailableProblems("problems")
+	problems, err := rp.TestcaseArchive.Problems()
 	if err != nil {
 		http.Error(w, "failed read problems from 'problems' directory: "+err.Error(), http.StatusInternalServerError)
 		return

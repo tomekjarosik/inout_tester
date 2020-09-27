@@ -21,16 +21,17 @@ const (
 	AnalyzeGplusplusMode
 )
 
+// TODO: Add and test if "-lasan" works
 func CompilationCommand(sourceCodeFile string, mode CompilationMode, executableFile string) (*exec.Cmd, error) {
 	var cmd *exec.Cmd
 	switch mode {
 	case ReleaseMode:
 		cmd = exec.Command("g++", "-std=c++17", "-static", "-O3", sourceCodeFile, "-lm", "-o", executableFile)
 	case AnalyzeClangMode:
-		cmd = exec.Command("clang++", "-std=c++14", "-Wall", "-O1", "-g", "-fsanitize=address",
+		cmd = exec.Command("clang++", "-std=c++14", "-Wall", "-Werror", "-O1", "-g", "-fsanitize=address",
 			"-fno-omit-frame-pointer", sourceCodeFile, "-lm", "-o", executableFile)
 	case AnalyzeGplusplusMode:
-		cmd = exec.Command("g++", "-std=c++17", "-Wall", "-O1", "-g", "-fsanitize=address",
+		cmd = exec.Command("g++", "-std=c++17", "-Wall", "-Werror", "-O1", "-g", "-fsanitize=address",
 			"-fno-omit-frame-pointer", sourceCodeFile, "-lm", "-o", executableFile)
 	default:
 		return nil, errors.New("unknown compilation mode selected")
@@ -38,6 +39,7 @@ func CompilationCommand(sourceCodeFile string, mode CompilationMode, executableF
 	return cmd, nil
 }
 
+// TODO: close the Command??
 func CompileSolution(sourceCodeFile string, mode CompilationMode, executableFile string) (output []byte, err error) {
 	cmd, err := CompilationCommand(sourceCodeFile, mode, executableFile)
 	if err != nil {

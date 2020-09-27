@@ -1,7 +1,5 @@
 package testcase
 
-
-
 import (
 	"bufio"
 	"context"
@@ -14,7 +12,6 @@ import (
 	"strings"
 	"time"
 )
-
 
 type Runner interface {
 	Run(executable string, info Info) Result
@@ -69,23 +66,31 @@ func (r *defaultRunner) Run(executable string, info Info) Result {
 }
 
 func runTestWithTmpOutput(executable string, info Info, streams Streams) Result {
-	tmpOutput, err := ioutil.TempFile(os.TempDir(), "temp-*.out")
+	tmpStdOutput, err := ioutil.TempFile(os.TempDir(), "tempstd-*.out")
 	if err != nil {
 		return Result{Status: InternalError, Description: fmt.Sprintf("unable to open temporary output file: %v", err)}
 	}
-	defer os.Remove(tmpOutput.Name())
-	defer tmpOutput.Close()
+	defer os.Remove(tmpStdOutput.Name())
+	defer tmpStdOutput.Close()
 
-	return RunTest(executable, info, streams, tmpOutput)
+	tmpErrorOutput, err := ioutil.TempFile(os.TempDir(), "temperr-*.out")
+	if err != nil {
+		return Result{Status: InternalError, Description: fmt.Sprintf("unable to open temporary output file: %v", err)}
+	}
+	defer os.Remove(tmpErrorOutput.Name())
+	defer tmpErrorOutput.Close()
+
+	return RunTest(executable, info, streams, tmpStdOutput, tmpErrorOutput)
 }
 
 // TODO(tjarosik): handle memory limit (-> ulimit -m 100000 && exec ./my-binary)
-func RunTest(executable string, info Info, streams Streams, generatedOutput io.ReadWriteSeeker) Result {
+func RunTest(executable string, info Info, streams Streams, generatedStdOutput io.ReadWriteSeeker, generatedErrorOutput io.ReadWriteSeeker) Result {
 	ctx, cancel := context.WithTimeout(context.Background(), info.TimeLimit)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, executable)
 	cmd.Stdin = streams.Input
-	cmd.Stdout = generatedOutput
+	cmd.Stdout = generatedStdOutput
+	cmd.Stderr = generatedErrorOutput
 	start := time.Now()
 	err := cmd.Run()
 	duration := time.Since(start)
@@ -96,18 +101,23 @@ func RunTest(executable string, info Info, streams Streams, generatedOutput io.R
 	}
 	if err != nil {
 		log.Println(err)
-		return Result{Status: InternalError,
-			Description: fmt.Sprintf("unable to run executable '%s' on test input file '%s'", executable, info.Name),
+		_, err = generatedErrorOutput.Seek(0, io.SeekStart)
+		stderrOutput, err := ioutil.ReadAll(generatedErrorOutput)
+		if err != nil {
+			stderrOutput = []byte("unable to read stderr")
+		}
+		return Result{Status: RuntimeError,
+			Description: fmt.Sprintf("unable to run executable '%s' on test input file '%s'. Stderr:%s", executable, info.Name, string(stderrOutput)),
 			Duration:    duration}
 	}
-	_, err = generatedOutput.Seek(0, io.SeekStart)
+	_, err = generatedStdOutput.Seek(0, io.SeekStart)
 	if err != nil {
 		return Result{Status: InternalError,
 			Description: fmt.Sprintf("unable to rewind generated output for test '%s'", info.Name),
 			Duration:    duration}
 	}
 
-	err = compare(streams.Output, generatedOutput)
+	err = compare(streams.Output, generatedStdOutput)
 	if err != nil {
 		return Result{Status: WrongAnswer,
 			Description: err.Error(), Duration: duration}

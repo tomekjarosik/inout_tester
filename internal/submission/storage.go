@@ -113,6 +113,7 @@ func (store *defaultStorage) Remove(id ID) error {
 }
 
 func (store *defaultStorage) LoadAll() error {
+	
 	files, err := ioutil.ReadDir(store.dataDirectory)
 	if err != nil {
 		return err

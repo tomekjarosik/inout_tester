@@ -14,11 +14,12 @@ func _() {
 	_ = x[MemoryLimitExceeded-4]
 	_ = x[WrongAnswer-5]
 	_ = x[Accepted-6]
+	_ = x[RuntimeError-7]
 }
 
-const _Status_name = "NotRunYetInternalErrorTimeLimitExceededMemoryLimitExceededWrongAnswerAccepted"
+const _Status_name = "NotRunYetInternalErrorTimeLimitExceededMemoryLimitExceededWrongAnswerAcceptedRuntimeError"
 
-var _Status_index = [...]uint8{0, 9, 22, 39, 58, 69, 77}
+var _Status_index = [...]uint8{0, 9, 22, 39, 58, 69, 77, 89}
 
 func (i Status) String() string {
 	i -= 1

@@ -18,17 +18,17 @@ type Processor interface {
 }
 
 type defaultProcessor struct {
-	queue                 chan Metadata
-	store                 Storage
-	problemsDataDirectory string
+	queue           chan Metadata
+	store           Storage
+	testcaseArchive testcase.Archive
 }
 
 // NewProcessor constructor of the Processor
-func NewProcessor(store Storage) Processor {
+func NewProcessor(store Storage, testcaseArchive testcase.Archive) Processor {
 	return &defaultProcessor{
-		queue:                 make(chan Metadata, 1000),
-		store:                 store,
-		problemsDataDirectory: "problems",
+		queue:           make(chan Metadata, 1000),
+		store:           store,
+		testcaseArchive: testcaseArchive,
 	}
 }
 
@@ -64,13 +64,12 @@ func (p *defaultProcessor) processSubmission(submission Metadata) (res Metadata,
 	submission.Status = RunningTests
 	p.store.Save(submission)
 
-	testcases, err := testcase.Populate(path.Join(p.problemsDataDirectory, submission.ProblemName))
+	testcases, err := p.testcaseArchive.Testcases(submission.ProblemName)
 	if err != nil {
 		return submission, err
 	}
 
-	runner := testcase.NewRunner(p.problemsDataDirectory,
-		testcase.DirectoryBasedDataStreamsProvider(path.Join(p.problemsDataDirectory, submission.ProblemName)))
+	runner := p.testcaseArchive.Runner(submission.ProblemName)
 
 	var processedTestCases []testcase.CompletedTestCase
 	for _, tc := range testcases {

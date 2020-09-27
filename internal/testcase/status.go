@@ -23,6 +23,8 @@ const (
 	WrongAnswer
 	// Accepted all OK
 	Accepted
+	// RuntimeError might happen if program crashes or returns non-zero exit status
+	RuntimeError
 )
 
 func (e *Status) UnmarshalJSON(data []byte) error {
