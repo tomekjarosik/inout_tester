@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"time"
 
 	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 )
@@ -21,6 +22,7 @@ type defaultProcessor struct {
 	queue           chan Metadata
 	store           Storage
 	testcaseArchive testcase.Archive
+	workersCount    int
 }
 
 // NewProcessor constructor of the Processor
@@ -43,9 +45,20 @@ func (p *defaultProcessor) Submit(meta Metadata, solution io.Reader) error {
 	return nil
 }
 
+func testcaseProcessor(runner testcase.Runner, executable string, jobs <-chan testcase.Info, results chan<- testcase.CompletedTestCase) {
+	for tc := range jobs {
+		results <- testcase.CompletedTestCase{Info: tc, Result: runner.Run(executable, tc)}
+	}
+	log.Println("worker exited")
+}
+
+// TODO: Add duration into submissionMetadata so we can compare szprotki on laptop vs szprotki on server
+// TODO: Add workerCount as parameter in each submissionMetadata
+// TODO: add minWorkerCount/maxWorkerCount
+// TODO: think of better api of changing status of a submission
 func (p *defaultProcessor) processSubmission(submission Metadata) (res Metadata, err error) {
 	fmt.Println("Processing submission:", submission)
-
+	start := time.Now()
 	submission.Status = Compiling
 	p.store.Save(submission)
 
@@ -70,17 +83,31 @@ func (p *defaultProcessor) processSubmission(submission Metadata) (res Metadata,
 	}
 
 	runner := p.testcaseArchive.Runner(submission.ProblemName)
+	executable := path.Join(compilationDir, submission.ExecutableFilename)
 
-	var processedTestCases []testcase.CompletedTestCase
+	// Put all TestCases into buffered channel
+	infoChan := make(chan testcase.Info, len(testcases))
 	for _, tc := range testcases {
-		executable := path.Join(compilationDir, submission.ExecutableFilename)
-		res := runner.Run(executable, tc)
-		processedTestCases = append(processedTestCases, testcase.CompletedTestCase{Info: tc, Result: res})
+		infoChan <- tc
+	}
+	close(infoChan)
+
+	resultChan := make(chan testcase.CompletedTestCase, len(testcases))
+	for i := 0; i < submission.WorkerCount; i++ {
+		go testcaseProcessor(runner, executable, infoChan, resultChan)
+	}
+
+	processedTestCases := make([]testcase.CompletedTestCase, 0)
+	for i := 0; i < len(testcases); i++ {
+		completedTc := <-resultChan
+		processedTestCases = append(processedTestCases, completedTc)
+		// TODO: Implement saving submission using channels not mutex
 		submission.CompletedTestCases = processedTestCases
 		p.store.Save(submission)
 	}
-	submission.CompletedTestCases = processedTestCases
+
 	submission.Status = AllTestsCompleted
+	submission.TotalProcessingTime = time.Since(start)
 	err = p.store.Save(submission)
 	log.Println("Processed submission", submission)
 	return submission, err

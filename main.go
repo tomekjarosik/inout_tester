@@ -26,17 +26,14 @@ func init() {
 }
 
 func generateMultiplyBy2(dir string) {
-	problemPath := path.Join(dir, "multiply_by_2")
-	err := os.MkdirAll(problemPath, 0755)
-	if err != nil {
-		log.Panic(err)
-	}
-
 	assert := func(e error) {
 		if e != nil {
-			log.Panic(err)
+			log.Panic(e)
 		}
 	}
+	problemPath := path.Join(dir, "multiply_by_2")
+
+	assert(os.MkdirAll(problemPath, 0755))
 
 	assert(ioutil.WriteFile(path.Join(problemPath, "t1.in"), []byte("1\n"), 0666))
 	assert(ioutil.WriteFile(path.Join(problemPath, "t1.out"), []byte("2\n"), 0666))
@@ -46,10 +43,13 @@ func generateMultiplyBy2(dir string) {
 
 	assert(ioutil.WriteFile(path.Join(problemPath, "t3.in"), []byte("-2000000000\n"), 0666))
 	assert(ioutil.WriteFile(path.Join(problemPath, "t3.out"), []byte("-4000000000\n"), 0666))
+
+	assert(ioutil.WriteFile(path.Join(problemPath, "t3.in"), []byte("-99999999999999999999999999999999999999999999999999\n"), 0666))
+	assert(ioutil.WriteFile(path.Join(problemPath, "t3.out"), []byte("-199999999999999999999999999999999999999999999999998\n"), 0666))
 }
 
-// TODO: Run docker with memory limit
 // TODO: Handle Ctrl+C properly
+// TODO: add ability to run tests in parallel, for each submission
 func main() {
 	fmt.Println("Starting...")
 	flag.Parse()

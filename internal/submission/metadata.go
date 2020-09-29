@@ -5,6 +5,7 @@ package submission
 import (
 	"encoding/json"
 	"errors"
+	"runtime"
 	"time"
 
 	guuid "github.com/google/uuid"
@@ -34,30 +35,35 @@ const (
 
 // Metadata metadata of the submission
 type Metadata struct {
-	ID                 ID                           `json:"id"`
-	SubmittedAt        time.Time                    `json:"submittedAt"`
-	ProblemName        string                       `json:"problemName"`
-	SolutionFilename   string                       `json:"solutionFilename"`
-	Status             Status                       `json:"status"`
-	ExecutableFilename string                       `json:"executableFilename"`
-	CompilationOutput  []byte                       `json:"compilationOutput"`
-	CompilationMode    testcase.CompilationMode     `json:"compilationMode"`
-	CompletedTestCases []testcase.CompletedTestCase `json:"testCases"`
+	ID                  ID                           `json:"id"`
+	SubmittedAt         time.Time                    `json:"submittedAt"`
+	ProblemName         string                       `json:"problemName"`
+	SolutionFilename    string                       `json:"solutionFilename"`
+	Status              Status                       `json:"status"`
+	ExecutableFilename  string                       `json:"executableFilename"`
+	CompilationOutput   []byte                       `json:"compilationOutput"`
+	CompilationMode     testcase.CompilationMode     `json:"compilationMode"`
+	CompletedTestCases  []testcase.CompletedTestCase `json:"testCases"`
+	TotalProcessingTime time.Duration                `json:"totalProcessingTime"`
+	WorkerCount         int                          `json:"workerCount"`
 }
 
 func NewMetadata(problem string, mode testcase.CompilationMode) Metadata {
 	id := ID(guuid.New())
 	return Metadata{
-		ID:                 id,
-		SubmittedAt:        time.Now(),
-		SolutionFilename:   id.String() + ".cpp",
-		Status:             Queued,
-		ProblemName:        problem,
-		ExecutableFilename: id.String() + ".tsk",
-		CompilationMode:    mode,
+		ID:                  id,
+		SubmittedAt:         time.Now(),
+		SolutionFilename:    id.String() + ".cpp",
+		Status:              Queued,
+		ProblemName:         problem,
+		ExecutableFilename:  id.String() + ".tsk",
+		CompilationMode:     mode,
+		TotalProcessingTime: time.Duration(0),
+		WorkerCount:         runtime.NumCPU() / 2,
 	}
 }
 
+// TODO: Add tests for marshal / unmarshall
 func (id ID) String() string {
 	return guuid.UUID(id).String()
 }
