@@ -5,7 +5,7 @@ package testcase
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	"io"
 	"os/exec"
 )
 
@@ -22,34 +22,37 @@ const (
 )
 
 // TODO: Add and test if "-lasan" works
-func CompilationCommand(sourceCodeFile string, mode CompilationMode, executableFile string) (*exec.Cmd, error) {
+func CompilationCommand(mode CompilationMode, executableFile string) (*exec.Cmd, error) {
 	var cmd *exec.Cmd
 	switch mode {
 	case ReleaseMode:
-		cmd = exec.Command("g++", "-std=c++17", "-static", "-O3", sourceCodeFile, "-lm", "-o", executableFile)
+		cmd = exec.Command("g++", "-std=c++17", "-static", "-O3", "-x", "c++", "-", "-lm", "-o", executableFile)
 	case AnalyzeClangMode:
 		cmd = exec.Command("clang++", "-std=c++14", "-Wall", "-Werror", "-O1", "-g", "-fsanitize=address",
-			"-fno-omit-frame-pointer", sourceCodeFile, "-lm", "-o", executableFile)
+			"-fno-omit-frame-pointer", "-x", "c++", "-", "-lm", "-o", executableFile)
 	case AnalyzeGplusplusMode:
 		cmd = exec.Command("g++", "-std=c++17", "-Wall", "-Werror", "-O1", "-g", "-fsanitize=address",
-			"-fno-omit-frame-pointer", sourceCodeFile, "-lm", "-o", executableFile)
+			"-fno-omit-frame-pointer", "-x", "c++", "-", "-lm", "-o", executableFile)
 	default:
 		return nil, errors.New("unknown compilation mode selected")
 	}
 	return cmd, nil
 }
 
-// TODO: close the Command??
-func CompileSolution(sourceCodeFile string, mode CompilationMode, executableFile string) (output []byte, err error) {
-	cmd, err := CompilationCommand(sourceCodeFile, mode, executableFile)
+func CompileSolution(solution io.Reader, mode CompilationMode, executableFile string) (output []byte, err error) {
+	cmd, err := CompilationCommand(mode, executableFile)
 	if err != nil {
 		return []byte{}, err
 	}
-	log.Println("About to execute command:", cmd.String())
+	//fmt.Println(solution)
+	cmd.Stdin = solution
+	//log.Println("About to execute command:", cmd.String())
 	output, err = cmd.CombinedOutput()
 	if err != nil {
 		if output != nil {
-			log.Println(string(output))
+			output = []byte(err.Error() + ". Output: " + string(output))
+		} else {
+
 		}
 		return output, errors.New("compilation failed with " + err.Error())
 	}
@@ -57,7 +60,7 @@ func CompileSolution(sourceCodeFile string, mode CompilationMode, executableFile
 }
 
 func FullCompilationCommadFor(cm CompilationMode) string {
-	cmd, err := CompilationCommand("a.cpp", cm, "a.out")
+	cmd, err := CompilationCommand(cm, "a.out")
 	if err != nil {
 		return "unable to convert"
 	}

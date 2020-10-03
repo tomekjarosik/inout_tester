@@ -2,10 +2,10 @@ package submission
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path"
+	"sort"
 	"time"
 
 	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
@@ -13,7 +13,7 @@ import (
 
 // Processor processes submissions
 type Processor interface {
-	Submit(meta Metadata, sourceCode io.Reader) error
+	Submit(meta Metadata)
 	Process() error
 	Quit()
 }
@@ -34,15 +34,8 @@ func NewProcessor(store Storage, testcaseArchive testcase.Archive) Processor {
 	}
 }
 
-func (p *defaultProcessor) Submit(meta Metadata, solution io.Reader) error {
-	fmt.Println("Submit:", meta)
-	err := p.store.Upload(meta, solution)
-	if err != nil {
-		return err
-	}
+func (p *defaultProcessor) Submit(meta Metadata) {
 	p.queue <- meta
-
-	return nil
 }
 
 func testcaseProcessor(runner testcase.Runner, executable string, jobs <-chan testcase.Info, results chan<- testcase.CompletedTestCase) {
@@ -52,27 +45,25 @@ func testcaseProcessor(runner testcase.Runner, executable string, jobs <-chan te
 	log.Println("worker exited")
 }
 
-// TODO: Add duration into submissionMetadata so we can compare szprotki on laptop vs szprotki on server
-// TODO: Add workerCount as parameter in each submissionMetadata
-// TODO: add minWorkerCount/maxWorkerCount
-// TODO: think of better api of changing status of a submission
 func (p *defaultProcessor) processSubmission(submission Metadata) (res Metadata, err error) {
 	fmt.Println("Processing submission:", submission)
 	start := time.Now()
 	submission.Status = Compiling
 	p.store.Save(submission)
 
-	compilationDir := path.Join(p.store.RootDir(), submission.ProblemName)
-	solutionFilePath := path.Join(compilationDir, submission.SolutionFilename)
-	executableFilePath := path.Join(compilationDir, submission.ExecutableFilename)
-	submission.CompilationOutput, err = testcase.CompileSolution(solutionFilePath, submission.CompilationMode, executableFilePath)
+	solution, err := p.store.Download(submission)
+	defer solution.Close()
+
+	executable := path.Join(os.TempDir(), submission.ProblemName+"-"+submission.ID.String()+".out")
+	defer os.Remove(executable)
+
+	submission.CompilationOutput, err = testcase.CompileSolution(solution, submission.CompilationMode, executable)
 
 	if err != nil {
 		submission.Status = CompilationError
 		p.store.Save(submission)
 		return submission, err
 	}
-	defer os.Remove(executableFilePath)
 
 	submission.Status = RunningTests
 	p.store.Save(submission)
@@ -83,7 +74,6 @@ func (p *defaultProcessor) processSubmission(submission Metadata) (res Metadata,
 	}
 
 	runner := p.testcaseArchive.Runner(submission.ProblemName)
-	executable := path.Join(compilationDir, submission.ExecutableFilename)
 
 	// Put all TestCases into buffered channel
 	infoChan := make(chan testcase.Info, len(testcases))
@@ -102,6 +92,7 @@ func (p *defaultProcessor) processSubmission(submission Metadata) (res Metadata,
 		completedTc := <-resultChan
 		processedTestCases = append(processedTestCases, completedTc)
 		// TODO: Implement saving submission using channels not mutex
+		sort.Sort(testcase.ByTestcaseName(processedTestCases))
 		submission.CompletedTestCases = processedTestCases
 		p.store.Save(submission)
 	}

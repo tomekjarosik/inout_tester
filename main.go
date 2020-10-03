@@ -44,8 +44,8 @@ func generateMultiplyBy2(dir string) {
 	assert(ioutil.WriteFile(path.Join(problemPath, "t3.in"), []byte("-2000000000\n"), 0666))
 	assert(ioutil.WriteFile(path.Join(problemPath, "t3.out"), []byte("-4000000000\n"), 0666))
 
-	assert(ioutil.WriteFile(path.Join(problemPath, "t3.in"), []byte("-99999999999999999999999999999999999999999999999999\n"), 0666))
-	assert(ioutil.WriteFile(path.Join(problemPath, "t3.out"), []byte("-199999999999999999999999999999999999999999999999998\n"), 0666))
+	assert(ioutil.WriteFile(path.Join(problemPath, "t4.in"), []byte("-99999999999999999999999999999999999999999999999999\n"), 0666))
+	assert(ioutil.WriteFile(path.Join(problemPath, "t4.out"), []byte("-199999999999999999999999999999999999999999999999998\n"), 0666))
 }
 
 // TODO: Handle Ctrl+C properly

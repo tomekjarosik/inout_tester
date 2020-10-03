@@ -14,13 +14,13 @@ import (
 	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 )
 
+// Storage Persistent storage for Submissions
 type Storage interface {
-	RootDir() string
-
 	Init() error
 	Destroy() error // !! destroys all the data stored !!
 
 	Upload(meta Metadata, solution io.Reader) error
+	Download(meta Metadata) (solution io.ReadCloser, err error)
 
 	Save(Metadata) error
 	Get(id ID) (Metadata, bool)
@@ -52,18 +52,18 @@ func (store *defaultStorage) Init() error {
 
 // Upload new SubmissionMetadata object with unique ID
 func (store *defaultStorage) Upload(meta Metadata, solution io.Reader) error {
-	solutionsDirectory := path.Join(store.RootDir(), meta.ProblemName)
+	solutionsDirectory := path.Join(store.dataDirectory, meta.ProblemName)
 	if err := ensureDirectoryExists(solutionsDirectory); err != nil {
 		return err
 	}
 
-	submissionFile, err := os.Create(path.Join(solutionsDirectory, meta.SolutionFilename))
+	submittedSolutionFile, err := os.Create(path.Join(solutionsDirectory, meta.SolutionFilename))
 	if err != nil {
 		return err
 	}
-	defer submissionFile.Close()
+	defer submittedSolutionFile.Close()
 
-	_, err = io.Copy(submissionFile, solution)
+	_, err = io.Copy(submittedSolutionFile, solution)
 	if err != nil {
 		return err
 	}
@@ -71,6 +71,14 @@ func (store *defaultStorage) Upload(meta Metadata, solution io.Reader) error {
 		return err
 	}
 	return nil
+}
+
+func (store *defaultStorage) Download(meta Metadata) (solution io.ReadCloser, err error) {
+	solutionFile, err := os.Open(path.Join(store.dataDirectory, meta.ProblemName, meta.SolutionFilename))
+	if err != nil {
+		return nil, err
+	}
+	return solutionFile, nil
 }
 
 func (store *defaultStorage) Save(metadata Metadata) error {
@@ -113,7 +121,7 @@ func (store *defaultStorage) Remove(id ID) error {
 }
 
 func (store *defaultStorage) LoadAll() error {
-	
+
 	files, err := ioutil.ReadDir(store.dataDirectory)
 	if err != nil {
 		return err
@@ -139,10 +147,6 @@ func (store *defaultStorage) LoadAll() error {
 	}
 	log.Printf("Loaded %d submissions into memory\n", len(store.data))
 	return nil
-}
-
-func (store *defaultStorage) RootDir() string {
-	return store.dataDirectory
 }
 
 func (store *defaultStorage) Destroy() error {

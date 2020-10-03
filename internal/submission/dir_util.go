@@ -10,10 +10,3 @@ func ensureDirectoryExists(dir string) error {
 	}
 	return nil
 }
-
-func (store *defaultStorage) ensureDirectoryStructure() error {
-	if err := ensureDirectoryExists(store.dataDirectory); err != nil {
-		return err
-	}
-	return nil
-}

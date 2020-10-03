@@ -22,7 +22,7 @@ type Status int
 
 const (
 	// Queued the solution is queued for processing
-	Queued Status = iota
+	Queued Status = iota + 1
 	// Compiling the solution is being processed
 	Compiling
 	// CompilationError the solution failed to compile

@@ -3,6 +3,7 @@ package testcase
 //go:generate go build -o testdata/multiply2.exe testdata/multiply2.go
 //go:generate go build -o testdata/multiply3.exe testdata/multiply3.go
 //go:generate go build -o testdata/infinite_loop.exe testdata/infinite_loop.go
+//go:generate go build -o testdata/invalid_binary.exe testdata/invalid_binary.go
 
 import (
 	"errors"
@@ -42,6 +43,17 @@ func TestRunTestCase_TimeLimitExceeded(t *testing.T) {
 	res := runTestWithTmpOutput("testdata/infinite_loop.exe", info, streams)
 	assert.Equal(t, TimeLimitExceeded, res.Status)
 	assert.Equal(t, "time limit exceeded: test case was aborted after '1s'", res.Description)
+}
+
+func TestRunTestCase_ExecutableFailedToRun(t *testing.T) {
+	info := Info{Name: "test1", TimeLimit: 1000 * time.Millisecond}
+	streams := Streams{
+		Input:  strings.NewReader("1\n"),
+		Output: strings.NewReader("2\n"),
+	}
+	res := runTestWithTmpOutput("testdata/invalid_binary.exe", info, streams)
+	assert.Equal(t, RuntimeError, res.Status)
+	assert.Equal(t, "unable to run executable 'testdata/invalid_binary.exe' on test input file 'test1'. Stderr:this is text on Stderr", res.Description)
 }
 
 func TestCompare_Identical(t *testing.T) {

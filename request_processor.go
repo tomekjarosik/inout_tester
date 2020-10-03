@@ -12,8 +12,6 @@ import (
 )
 
 // TODO(tjarosik): test g++/clang++ address sanitizers on Linux (+ write a README how to setup)
-// TODO(tjarosik): add redirect to home page after submitting a solution
-// TODO(tjarosik): add docker environment with adress sanitizers (g++ -lasan)
 
 // RequestProcessor processes HTTP requests
 type RequestProcessor struct {
@@ -45,11 +43,12 @@ func (rp *RequestProcessor) apiSubmitSolutionHandler(w http.ResponseWriter, r *h
 	log.Println("compilationMode=", compilationMode)
 	metadata := submission.NewMetadata(problemName, testcase.CompilationMode(compilationMode))
 	fmt.Println("submissionMetadata:", metadata)
-	err = rp.SubmissionProcessor.Submit(metadata, formFile)
+	rp.SubmissionStorage.Upload(metadata, formFile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	rp.SubmissionProcessor.Submit(metadata)
 
 	fmt.Fprintf(w, website.HtmlDocumentWrap(
 		fmt.Sprintf(` <meta http-equiv="refresh" content="2;url=/" />

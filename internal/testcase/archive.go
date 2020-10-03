@@ -23,6 +23,13 @@ func NewArchive(problemsDirectory string) Archive {
 	}
 }
 
+// ByTestcaseName is a helper type to implement sorting
+type ByTestcaseName []CompletedTestCase
+
+func (a ByTestcaseName) Len() int           { return len(a) }
+func (a ByTestcaseName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByTestcaseName) Less(i, j int) bool { return a[i].Info.Name < a[j].Info.Name }
+
 // Testcases searches directory for test case descriptions (.in / .out files, maybe others in the future)
 // TODO: implement testcase metadata, which knows about timelimits and memory limits
 func (a *defaultArchive) Testcases(problemName string) (testcases []Info, err error) {
