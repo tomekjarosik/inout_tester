@@ -35,7 +35,8 @@ func TestCompilation_ReleaseMode_SyntaxError(t *testing.T) {
 	out, err := CompileSolution(solution, ReleaseMode, tmpFileName)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "compilation failed with exit status 1")
-	assert.Contains(t, string(out), "<stdin>:2:15: error: 'xxx' was not declared in this scope")
+	assert.Contains(t, string(out), "<stdin>:2:15: error")
+	assert.Contains(t, string(out), "was not declared in this scope")
 	os.Remove(tmpFileName)
 }
 

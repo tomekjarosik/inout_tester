@@ -62,7 +62,8 @@ func TestProcessor_ProcessSolution(t *testing.T) {
 
 	go proc.Process()
 	proc.Submit(metadata)
-	time.Sleep(250 * time.Millisecond)
+	// TODO: wait smarter
+	time.Sleep(750 * time.Millisecond)
 
 	metadata, ok := storage.Get(metadata.ID)
 	assert.True(t, ok)
