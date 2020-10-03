@@ -62,8 +62,14 @@ func TestProcessor_ProcessSolution(t *testing.T) {
 
 	go proc.Process()
 	proc.Submit(metadata)
-	// TODO: wait smarter
-	time.Sleep(750 * time.Millisecond)
+
+	for i := 0; i < 50; i++ {
+		metadata, ok := storage.Get(metadata.ID)
+		if ok && metadata.Status == AllTestsCompleted {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 
 	metadata, ok := storage.Get(metadata.ID)
 	assert.True(t, ok)
