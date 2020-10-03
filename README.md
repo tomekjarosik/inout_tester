@@ -3,6 +3,7 @@
 ### What is it?
 
 Simple tester of C++ solutions which take some input from STDIN and write some output to STDOUT.
+You can add your own problems with testcases just by copying .in/.out files to subdirectory of 'problems' directory.
 
 ![](homepage_screenshot.png?raw=true)
 
@@ -10,10 +11,14 @@ Simple tester of C++ solutions which take some input from STDIN and write some o
 
 You can download binaries for your platforms from ...
 
-After that it's just simple as:
+Only single binary is required. Works on Windows, Linux, MacOS. Running is as simple as:
 ```
 ./inout_tester
 ```
+
+It will create "multiply by 2" problem, so you can start testing right away.
+The testcase contains single integer on its input, and expects integer multiplied by 2.
+
 
 ### Running - docker
 
