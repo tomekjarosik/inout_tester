@@ -26,15 +26,11 @@ jobs:
       run: |
         go get -v -t -d ./...
         go get golang.org/x/tools/cmd/stringer
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
     - name: Generate
-      run: go generate ./...
+      run: go generate -mod=vendor ./...
 
     - name: Build
-      run: go build -v .
+      run: go build -mod=vendor -v .
 
     - name: Test
-      run: go test -v ./...
+      run: go test -mod=vendor -v ./...
