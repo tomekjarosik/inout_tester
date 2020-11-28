@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/tomekjarosik/inout_tester/internal/submission"
 	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 	"github.com/tomekjarosik/inout_tester/website"
@@ -56,9 +58,23 @@ func (rp *RequestProcessor) apiSubmitSolutionHandler(w http.ResponseWriter, r *h
 }
 
 func (rp *RequestProcessor) apiReadSingleSubmission(w http.ResponseWriter, r *http.Request) {
-	//vars := mux.Vars(r)
-	//key := vars["id"]
-	//problemName := vars["problemName"]
+	vars := mux.Vars(r)
+	key := vars["id"]
+	// problemName := vars["problemName"]
+	submissionID, err := submission.ParseID(key)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	metadata, ok := rp.SubmissionStorage.Get(submissionID)
+	if ok {
+		solution, err := rp.SubmissionStorage.Download(metadata)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		io.Copy(w, solution)
+	}
 }
 
 // TODO(tjarosik): Read problem list from the Config

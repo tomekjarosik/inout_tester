@@ -43,6 +43,7 @@ func HomePageTemplate() (*template.Template, error) {
 		<div class="collapsible-body">
 			<div style="border: 2px solid black; background: lightblue;">
 			{{FullCompilationCommandFor .CompilationMode}}
+			<span class="badge lightblue"><a href="/api/submission/{{.ProblemName}}/{{.ID}}"><i class="material-icons right">cloud_download</i></a></span>
 			</div>
 			{{if HasAnyTestCases .CompletedTestCases}}
 				<table class="responsive-table striped" cellspacing="0">

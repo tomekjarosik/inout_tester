@@ -68,6 +68,14 @@ func (id ID) String() string {
 	return guuid.UUID(id).String()
 }
 
+func ParseID(id string) (ID, error) {
+	u, err := guuid.Parse(id)
+	if err != nil {
+		return ID{}, err
+	}
+	return ID(u), err
+}
+
 func (id ID) MarshalJSON() ([]byte, error) {
 	g := guuid.UUID(id)
 	return json.Marshal(g.String())
