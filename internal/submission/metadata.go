@@ -44,6 +44,8 @@ type Metadata struct {
 	CompilationOutput   []byte                       `json:"compilationOutput"`
 	CompilationMode     testcase.CompilationMode     `json:"compilationMode"`
 	CompletedTestCases  []testcase.CompletedTestCase `json:"testCases"`
+	TestCasesCount      int                          `json:"testCasesCount"`
+	AcceptedCount       int                          `json:"acceptedCount"`
 	TotalProcessingTime time.Duration                `json:"totalProcessingTime"`
 	WorkerCount         int                          `json:"workerCount"`
 }
@@ -59,6 +61,7 @@ func NewMetadata(problem string, mode testcase.CompilationMode) Metadata {
 		ExecutableFilename:  id.String() + ".tsk",
 		CompilationMode:     mode,
 		TotalProcessingTime: time.Duration(0),
+		TestCasesCount:      0,
 		WorkerCount:         runtime.NumCPU() / 2,
 	}
 }

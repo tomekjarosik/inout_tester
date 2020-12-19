@@ -35,8 +35,8 @@ func TestDefaultStorage_Upload(t *testing.T) {
 	assert.Equal(t, "testproblem", m.ProblemName)
 	assert.Equal(t, content, readFile(t, path.Join(tmpstoragedir, "testproblem", m.SolutionFilename)))
 	assert.NoError(t, err)
-	assert.Equal(t, 0, m.Score())
-	assert.Equal(t, 0, m.MaxScore())
+	assert.Equal(t, 0, m.AcceptedCount)
+	assert.Equal(t, 0, m.TestCasesCount)
 	assert.Equal(t, Queued, m.Status)
 }
 

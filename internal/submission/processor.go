@@ -72,6 +72,7 @@ func (p *defaultProcessor) processSubmission(submission Metadata) (res Metadata,
 	if err != nil {
 		return submission, err
 	}
+	submission.TestCasesCount = len(testcases)
 
 	runner := p.testcaseArchive.Runner(submission.ProblemName)
 
@@ -91,8 +92,11 @@ func (p *defaultProcessor) processSubmission(submission Metadata) (res Metadata,
 	for i := 0; i < len(testcases); i++ {
 		completedTc := <-resultChan
 		processedTestCases = append(processedTestCases, completedTc)
+		if completedTc.Result.Status == testcase.Accepted {
+			submission.AcceptedCount++
+		}
 		// TODO: Implement saving submission using channels not mutex
-		sort.Sort(testcase.ByTestcaseName(processedTestCases))
+		sort.Sort(testcase.ByTestcaseStatusAndName(processedTestCases))
 		submission.CompletedTestCases = processedTestCases
 		p.store.Save(submission)
 	}

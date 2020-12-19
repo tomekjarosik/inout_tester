@@ -112,7 +112,16 @@ func (rp *RequestProcessor) RenderHomePage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err = tmpl.Execute(w, rp.SubmissionStorage.List()); err != nil {
+	allSubmissions := rp.SubmissionStorage.List()
+	limit := 50
+	for i := range allSubmissions {
+		if len(allSubmissions[i].CompletedTestCases) > limit {
+			// we have to cut them down
+			allSubmissions[i].CompletedTestCases = allSubmissions[i].CompletedTestCases[:limit]
+		}
+	}
+
+	if err = tmpl.Execute(w, allSubmissions); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

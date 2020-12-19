@@ -10,8 +10,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-
-	testcase "github.com/tomekjarosik/inout_tester/internal/testcase"
 )
 
 // Storage Persistent storage for Submissions
@@ -159,18 +157,4 @@ func (store *defaultStorage) Get(id ID) (Metadata, bool) {
 		return Metadata{}, false
 	}
 	return v, true
-}
-
-func (meta Metadata) Score() int {
-	res := 0
-	for _, tc := range meta.CompletedTestCases {
-		if tc.Result.Status == testcase.Accepted {
-			res++
-		}
-	}
-	return res
-}
-
-func (meta Metadata) MaxScore() int {
-	return len(meta.CompletedTestCases)
 }

@@ -38,7 +38,7 @@ func HomePageTemplate() (*template.Template, error) {
 		<li>
 		<div class="collapsible-header">
 			<span style="font-weight:bold">{{TimeFormat .SubmittedAt}}&nbsp;|&nbsp;</span>{{.ProblemName}}</span>&nbsp;&nbsp;{{.Status}} 
-			<span class="new badge {{ScoreColorFormat .Score}}" data-badge-caption="points">{{.Score}}/{{.MaxScore}}</span>
+			<span class="new badge {{ScoreColorFormat .AcceptedCount}}" data-badge-caption="points">{{.AcceptedCount}}/{{.TestCasesCount}}</span>
 		</div>
 		<div class="collapsible-body">
 			<div style="border: 2px solid black; background: lightblue;">
