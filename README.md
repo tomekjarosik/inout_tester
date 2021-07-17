@@ -47,4 +47,4 @@ go test ./...
 go test ./... -coverprofile=cp.out && go tool cover -html=cp.out
 ```
 
-test b2
+test b3
