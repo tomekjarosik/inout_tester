@@ -49,4 +49,4 @@ go test ./... -coverprofile=cp.out && go tool cover -html=cp.out
 
 
 ### Test ttf
-test6
+test7
