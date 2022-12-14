@@ -2,7 +2,9 @@ package testcase
 
 import (
 	"io/ioutil"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -45,16 +47,23 @@ func (a ByTestcaseStatusAndName) Less(i, j int) bool {
 // TODO: implement testcase metadata, which knows about timelimits and memory limits
 func (a *defaultArchive) Testcases(problemName string) (testcases []Info, err error) {
 
-	files, err := ioutil.ReadDir(path.Join(a.dataDir, problemName))
-	if err != nil {
-		return
-	}
+	var filePaths = make([]string, 0)
 	const ext = ".in"
-	for _, f := range files {
-		if !strings.HasSuffix(f.Name(), ext) {
-			continue
+	problemDir := filepath.Join(a.dataDir, problemName)
+	err = filepath.Walk(problemDir, func(dir string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
 		}
-		tc := NewInfo(strings.TrimSuffix(f.Name(), ext), 10*time.Second, 0)
+		if !strings.HasSuffix(info.Name(), ext) {
+			return nil
+		}
+
+		filePaths = append(filePaths, strings.TrimPrefix(dir, problemDir))
+		return nil
+	})
+
+	for _, f := range filePaths {
+		tc := NewInfo(strings.TrimSuffix(f, ext), 10*time.Second, 0)
 		testcases = append(testcases, tc)
 	}
 	return
