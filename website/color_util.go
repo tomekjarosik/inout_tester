@@ -1,6 +1,10 @@
 package website
 
-import "github.com/tomekjarosik/inout_tester/internal/testcase"
+import (
+	"fmt"
+	"github.com/tomekjarosik/inout_tester/internal/testcase"
+	"time"
+)
 
 func ScoreColorFormat(score int) string {
 	if score == 0 {
@@ -14,4 +18,8 @@ func TestCaseStatusColorFormat(status testcase.Status) string {
 		return "green lighten-3"
 	}
 	return " red lighten-3"
+}
+
+func TestCaseDurationFormatFunc(duration time.Duration) string {
+	return fmt.Sprintf("%ds %3d ms", int(duration.Seconds()), int(duration.Milliseconds()))
 }

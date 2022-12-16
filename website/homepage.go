@@ -14,6 +14,7 @@ func HomePageTemplate() (*template.Template, error) {
 			"TimeFormat":                func(t time.Time) string { return t.Format(time.Stamp) },
 			"ScoreColorFormat":          ScoreColorFormat,
 			"TestCaseStatusColor":       TestCaseStatusColorFormat,
+			"TestCaseDurationFormatFunc": TestCaseDurationFormatFunc,
 			"HasAnyTestCases":           func(c []testcase.CompletedTestCase) bool { return len(c) > 0 },
 			"BytesToString":             func(arr []byte) string { return string(arr) },
 			"FullCompilationCommandFor": testcase.FullCompilationCommadFor,
@@ -66,7 +67,7 @@ func HomePageTemplate() (*template.Template, error) {
 					<tr class="{{TestCaseStatusColor .Result.Status}}">
 						<td>{{.Info.Name}} </td>
 						<td>{{.Result.Status}} </td>
-						<td>{{.Result.Duration}} / {{.Info.TimeLimit}}</td>
+						<td>{{TestCaseDurationFormatFunc .Result.Duration}} / {{.Info.TimeLimit}}</td>
 						<td>{{.Result.Description}}</td>
 					</tr>
 				{{end}}
